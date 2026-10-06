@@ -1,0 +1,38 @@
+{
+  "name": "eduvia-consultancy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Eduvia Consultancy Pvt. Ltd. — study abroad consultancy website (React frontend + Express/MongoDB backend)",
+  "keywords": [
+    "study-abroad",
+    "education-consultancy",
+    "nepal"
+  ],
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "setup": "npm install && npm --prefix backend install && npm --prefix frontend install",
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "dev": "concurrently -n backend,frontend -c blue,red \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "start": "npm --prefix backend run start",
+    "build": "npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview",
+    "seed": "npm --prefix backend run seed",
+    "seed:uk": "npm --prefix backend run seed:uk",
+    "seed:us": "npm --prefix backend run seed:us",
+    "seed:ca": "npm --prefix backend run seed:ca",
+    "seed:ie": "npm --prefix backend run seed:ie",
+    "seed:au": "npm --prefix backend run seed:au",
+    "seed:ae": "npm --prefix backend run seed:ae",
+    "backfill:seo": "npm --prefix backend run backfill:seo",
+    "verify:seo": "npm --prefix backend run verify:seo",
+    "lint": "npm --prefix backend run lint && npm --prefix frontend run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

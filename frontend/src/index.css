@@ -1,0 +1,471 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   Design tokens — derived from the Eduvia logo
+   Royal blue #203890  ·  Crimson red #DE1F26
+--------------------------------------------------------------------------- */
+:root {
+  --brand-blue: #203890;
+  --brand-blue-dark: #162663;
+  --brand-blue-light: #3c5bd0;
+  --brand-red: #de1f26;
+  --brand-red-dark: #c4161c;
+
+  --color-primary: var(--brand-blue);
+  --color-primary-light: var(--brand-blue-light);
+  --color-secondary: var(--brand-blue-light);
+  --color-accent: var(--brand-red);
+  --color-dark: #101322;
+  --color-text: #2c3145;
+  --color-text-light: #5b6376;
+  --color-bg: #ffffff;
+  --color-bg-light: #f6f8fc;
+  --color-border: #dfe5f1;
+  --color-success: #16a34a;
+  --color-error: #de1f26;
+  --color-warning: #d97706;
+
+  --header-height: 4rem;
+}
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-padding-top: 6rem;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--color-text);
+    background-color: var(--color-bg);
+    line-height: 1.65;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    line-height: 1.18;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-dark);
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background-color: rgb(32 56 144 / 0.14);
+    color: var(--brand-blue-dark);
+  }
+
+  /* Consistent, visible keyboard focus everywhere */
+  :focus-visible {
+    outline: 2px solid var(--brand-blue);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Refined scrollbar (desktop) */
+  @media (min-width: 1024px) {
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f2f6;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c7ccd8;
+      border: 2px solid #f1f2f6;
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #6d7589;
+    }
+  }
+
+  /* Respect users who prefer less motion */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* ---------------------------------------------------------------- buttons */
+  .btn-primary,
+  .btn-secondary,
+  .btn-accent,
+  .btn-outline,
+  .btn-ghost,
+  .btn-white {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold rounded-xl
+           whitespace-nowrap transition-all duration-200 ease-smooth
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+           active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  .btn-primary {
+    @apply bg-primary-500 text-white shadow-xs hover:bg-primary-600 hover:shadow-brand
+           focus-visible:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary-500 text-white shadow-xs hover:bg-secondary-600 hover:shadow-brand
+           focus-visible:ring-secondary-500;
+  }
+
+  .btn-accent {
+    @apply bg-accent-500 text-white shadow-xs hover:bg-accent-600 hover:shadow-accent
+           focus-visible:ring-accent-500;
+  }
+
+  .btn-outline {
+    @apply border border-primary-200 bg-white text-primary-500 hover:border-primary-500 hover:bg-primary-50
+           focus-visible:ring-primary-500;
+  }
+
+  .btn-ghost {
+    @apply text-primary-500 hover:bg-primary-50 focus-visible:ring-primary-500;
+  }
+
+  .btn-white {
+    @apply bg-white text-primary-500 shadow-medium hover:bg-primary-50 focus-visible:ring-white;
+  }
+
+  .btn-sm {
+    @apply px-4 py-2 text-xs rounded-lg;
+  }
+
+  .btn-lg {
+    @apply px-8 py-3.5 text-base rounded-xl;
+  }
+
+  /* ------------------------------------------------------------------ cards */
+  .card {
+    @apply bg-white rounded-2xl border border-dark-200/70 shadow-soft overflow-hidden
+           transition-all duration-300 ease-smooth;
+  }
+
+  .card-hover {
+    @apply hover:-translate-y-1 hover:border-primary-200 hover:shadow-medium;
+  }
+
+  /* --------------------------------------------------------------- surfaces */
+  .section-padding {
+    @apply py-16 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8;
+  }
+
+  .container-custom {
+    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .surface-hairline {
+    @apply border-t border-dark-200/70;
+  }
+
+  /* ------------------------------------------------------------ typography */
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary-500;
+  }
+
+  .section-title {
+    @apply text-3xl md:text-4xl font-display font-bold text-dark-900 tracking-tight;
+  }
+
+  .section-lead {
+    @apply text-base md:text-lg text-dark-500 leading-relaxed;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent;
+  }
+
+  .gradient-bg {
+    @apply bg-gradient-to-br from-primary-500 via-primary-600 to-primary-800;
+  }
+
+  /* ----------------------------------------------------------------- glass */
+  .glass {
+    @apply bg-white/80 backdrop-blur-md border border-white/40;
+  }
+
+  .glass-dark {
+    @apply bg-primary-950/70 backdrop-blur-md border border-white/10;
+  }
+
+  /* ----------------------------------------------------------------- forms */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border border-dark-200 bg-white text-sm text-dark-900
+           placeholder:text-dark-400 shadow-xs transition-all duration-200
+           hover:border-dark-300
+           focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10;
+  }
+
+  .input-error {
+    @apply border-accent-400 focus:border-accent-500 focus:ring-accent-500/10;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-dark-700 mb-1.5;
+  }
+
+  /* ---------------------------------------------------------------- badges */
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary-50 text-primary-600;
+  }
+
+  .badge-accent {
+    @apply badge bg-accent-50 text-accent-600;
+  }
+
+  .badge-success {
+    @apply badge bg-green-50 text-green-700;
+  }
+
+  .badge-warning {
+    @apply badge bg-amber-50 text-amber-700;
+  }
+
+  .badge-danger {
+    @apply badge bg-accent-50 text-accent-700;
+  }
+
+  .badge-neutral {
+    @apply badge bg-dark-100 text-dark-600;
+  }
+
+  /* ---------------------------------------------------------------- layout */
+  .page-container {
+    @apply min-h-screen;
+  }
+
+  .prose-brand {
+    @apply text-dark-600 leading-relaxed;
+  }
+
+  .prose-brand h2 {
+    @apply text-2xl font-display font-bold text-dark-900 mt-10 mb-4;
+  }
+
+  .prose-brand h3 {
+    @apply text-xl font-display font-semibold text-dark-900 mt-8 mb-3;
+  }
+
+  .prose-brand p {
+    @apply mb-4;
+  }
+
+  .prose-brand ul {
+    @apply list-disc pl-6 mb-4 space-y-2;
+  }
+
+  .prose-brand a {
+    @apply text-secondary-500 font-medium underline decoration-secondary-300 underline-offset-2 hover:decoration-secondary-500;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Visually hidden until focused — keyboard skip to main content */
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-primary-600 focus:px-5 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-white focus:shadow-brand;
+  }
+
+  /* Full-bleed decorative section background */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+}
+
+/* =========================================================================
+   Effects layer — ambient depth & motion
+
+   Everything here animates transform/opacity only (never layout properties),
+   and is neutralised by the prefers-reduced-motion rule in the base layer.
+   ========================================================================= */
+
+/* ── Aurora — slow-drifting colour fields behind dark sections ------------- */
+.aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.aurora-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(72px);
+  will-change: transform;
+}
+
+/* ── Spotlight — cursor-tracked highlight on cards -------------------------
+   Position comes from --spot-x/--spot-y, written by useSpotlight() on a
+   rAF-throttled mousemove. No React re-render is involved.                 */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
+
+.spotlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  background: radial-gradient(
+    340px circle at var(--spot-x, 50%) var(--spot-y, 0%),
+    rgba(32, 56, 144, 0.13),
+    rgba(60, 91, 208, 0.05) 42%,
+    transparent 72%
+  );
+}
+
+.spotlight:hover::after,
+.spotlight:focus-within::after {
+  opacity: 1;
+}
+
+/* Without a hover-capable pointer, park a fixed sheen at the top edge so
+   touch and keyboard users still get the depth cue. */
+@media (hover: none) {
+  .spotlight::after {
+    opacity: 1;
+    background: radial-gradient(
+      280px circle at 50% 0%,
+      rgba(32, 56, 144, 0.1),
+      transparent 70%
+    );
+  }
+}
+
+/* ── Shine — light sweep across primary CTAs ------------------------------- */
+.shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine::before {
+  content: '';
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  left: 0;
+  width: 55%;
+  pointer-events: none;
+  transform: translateX(-140%) skewX(-18deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+}
+
+.shine:hover::before {
+  animation: shine-sweep 800ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes shine-sweep {
+  from {
+    transform: translateX(-140%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(140%) skewX(-18deg);
+  }
+}
+
+/* ── Gradient text — animated brand gradient ------------------------------- */
+.text-gradient {
+  background-image: linear-gradient(100deg, #203890 0%, #3c5bd0 45%, #6f88dc 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: text-pan 9s ease infinite;
+}
+
+@keyframes text-pan {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* --------------------------------------------------------------- skeleton */
+.skeleton {
+  @apply relative overflow-hidden bg-dark-100 rounded-lg;
+}
+
+.skeleton::after {
+  content: '';
+  @apply absolute inset-0 -translate-x-full animate-shimmer;
+  background-image: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+}
+
+/* ------------------------------------------------------------------ toast */
+.toast-enter {
+  animation: slideInRight 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ------------------------------------------------- safe area (mobile CTA) */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
