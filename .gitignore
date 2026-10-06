@@ -7,6 +7,8 @@ node_modules/
 dist/
 build/
 *.tsbuildinfo
+.next/
+out/
 
 # Environment
 .env
@@ -31,6 +33,7 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+next-start.err
 
 # Testing
 coverage/
@@ -40,10 +43,3 @@ coverage/
 *.p12
 *.key
 *.cert
-
-# Local visual-review artifacts (headless Chrome profile + screenshots)
-frontend/.tools/
-frontend/.shots/
-frontend/.review/
-frontend/.design/
-frontend/shots/

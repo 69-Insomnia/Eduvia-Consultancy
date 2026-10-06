@@ -4,135 +4,101 @@ A modern, production-ready education consultancy website for Nepali students who
 
 ## Tech Stack
 
-**Frontend:**
-- React 18 + Vite
-- Tailwind CSS
-- React Router v6
-- Framer Motion
-- Lucide React icons
-- Axios
-- React Helmet Async (SEO)
-- React Hot Toast (notifications)
+**One Next.js app (App Router) + the original Express API mounted inside it:**
 
-**Backend:**
-- Node.js + Express.js
-- PostgreSQL (Supabase) + Sequelize
-- JWT Authentication
-- Cloudinary (image uploads)
-- Helmet (security)
-- Rate Limiting
+- Next.js 14 (App Router) + React 18 + TypeScript
+- Tailwind CSS, Framer Motion, Lucide React icons
+- React Helmet Async (per-page SEO tags, same behaviour as the old SPA)
+- Express.js mounted in-process via `pages/api/[...path].ts` (all `/api/*`
+  routes) and a `/sitemap.xml` rewrite — no separate backend process
+- PostgreSQL (Supabase) + Sequelize, JWT auth, Cloudinary uploads
+- Helmet security headers, rate limiting, CORS
+
+The pages under `app/` are thin wrappers around the converted SPA views in
+`views/`; `utils/router.tsx` is a small react-router compatibility layer over
+`next/navigation`, so component code stayed virtually unchanged.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 18+ (20+ recommended)
 - A Supabase project (PostgreSQL)
-- npm or yarn
+- npm
 
 ### Installation
 
-The repository root is an npm project that delegates to `backend/` and `frontend/`, so you can
-install and run everything without changing directories.
-
 ```bash
-# Clone the repository
 git clone <repo-url>
 cd eduvia-consultancy
-
-# Install root + backend + frontend dependencies in one step
-npm run setup
+npm install
+cp .env.example .env   # then fill in the values
 ```
 
-Run only the sub-project installs:
-
-```bash
-npm run install:all
-```
-
-### Root scripts
+### Scripts
 
 | Command | Does |
 |---------|------|
-| `npm run setup` | Install root, backend and frontend dependencies |
-| `npm run dev` | Run backend and frontend together (labelled `backend` / `frontend`) |
-| `npm run dev:backend` | Backend only (nodemon) |
-| `npm run dev:frontend` | Frontend only (Vite) |
-| `npm run build` | Production build of the frontend into `frontend/dist` |
-| `npm run preview` | Serve the production build locally |
-| `npm run seed` | Seed the database |
-| `npm start` | Start the backend without nodemon |
-| `npm run lint` | Lint backend and frontend |
-
-Every script is a thin wrapper around `npm --prefix <dir> run ...`, so the per-directory
-commands below still work exactly as before.
+| `npm run dev` | Dev server with hot reload (http://localhost:3000) |
+| `npm run build` | Production build |
+| `npm start` | Serve the production build |
+| `npm run typecheck` | `tsc --noEmit` over the whole project |
+| `npm run seed` | Seed/refresh the canonical demo content |
+| `npm run seed:uk` … `seed:ae` | Country-specific university seeds |
+| `npm run backfill:seo` | Regenerate SEO fields for existing content |
+| `npm run verify:seo` | Validate the sitemap + SEO invariants |
+| `npm run migrate` | Apply models to the DB and regenerate `supabase/migrations/*_init_schema.sql` |
+| `npm run e2e` | API + page end-to-end checks against a running server |
 
 ### Environment Variables
 
-**Backend (.env):**
 ```bash
-cd backend
 cp .env.example .env
 # Edit .env with your values
 ```
 
-Required variables:
-- `SUPABASE_DB_URL` — Supabase Postgres connection string. Use the **Session pooler** URI (Project Settings → Database → Connection string → Session pooler, port 6543, username `postgres.<project-ref>`); it has IPv4 addresses. The direct host (`db.<project-ref>.supabase.co`) is IPv6-only and fails with `ENOTFOUND` on IPv4-only networks. SSL is configured in `config/db.js`, so drop any `?sslmode=` query parameter from the URI.
+Required:
+
+- `SUPABASE_DB_URL` — Supabase Postgres connection string. Use the **Session
+  pooler** URI (Project Settings → Database → Connection string → Session
+  pooler, port 6543, username `postgres.<project-ref>`); it has IPv4
+  addresses. The direct host (`db.<project-ref>.supabase.co`) is IPv6-only and
+  fails with `ENOTFOUND` on IPv4-only networks. SSL is configured in
+  `server/config/db.ts`, so drop any `?sslmode=` query parameter from the URI.
 - `JWT_SECRET` — Secret key for JWT tokens
-- `CORS_ORIGIN` — Frontend URL (http://localhost:5173)
 
 Optional:
-- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` — For image uploads
 
-**Frontend (.env):**
-```bash
-cd frontend
-cp .env.example .env
-```
+- `CORS_ORIGIN` — comma-separated allowed browser origins (default
+  `http://localhost:3000`; unused for same-origin requests)
+- `SITE_URL` / `NEXT_PUBLIC_SITE_URL` — canonical origin (default
+  `https://eduviaconsultancy.com`)
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` —
+  for admin media uploads
 
 ### Database Setup
 
 ```bash
-# Seed the database with sample data
-cd backend
 npm run seed
 ```
 
 This creates:
+
 - Default admin: `admin@eduvia.com` / `admin123`
-- 12 study destinations
-- 10 universities
-- 8 courses
-- 6 scholarships
-- 12 services
-- 5 team members
-- 8 FAQs
-- 3 testimonials
-- 3 success stories
-- 3 blog posts
-- Site settings
+- 12 study destinations, 10 universities, 8 courses, 6 scholarships
+- 12 services, 5 team members, 8 FAQs
+- 3 testimonials, 3 success stories, 3 blog posts
+- Site settings + page SEO rows
 
 ### Development
-
-From the repository root, start both servers at once:
 
 ```bash
 npm run dev
 ```
 
-Or run them in separate terminals:
-
-```bash
-# Terminal 1 — backend
-npm run dev:backend
-
-# Terminal 2 — frontend
-npm run dev:frontend
-```
-
-Frontend: http://localhost:5173
-Backend API: http://localhost:5000/api
-Admin Panel: http://localhost:5173/admin
+- Site: http://localhost:3000
+- API: http://localhost:3000/api (Express, same origin — no CORS in dev)
+- Admin Panel: http://localhost:3000/admin/login
 
 ### Admin Login
 
@@ -144,41 +110,22 @@ Admin Panel: http://localhost:5173/admin
 
 ```
 eduvia-consultancy/
-├── backend/
-│   ├── src/
-│   │   ├── config/         # Database config
-│   │   ├── controllers/    # Route handlers
-│   │   ├── middleware/      # Auth, error handling
-│   │   ├── models/         # Sequelize models
-│   │   ├── routes/         # API routes
-│   │   ├── seeds/          # Database seeder
-│   │   ├── services/       # Business logic
-│   │   ├── utils/          # Helpers
-│   │   └── server.js       # Entry point
-│   ├── .env.example
-│   └── package.json
-├── frontend/
-│   ├── public/             # Static assets
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── common/     # Reusable components
-│   │   │   ├── layout/     # Layout components
-│   │   │   ├── sections/   # Page sections
-│   │   │   └── ui/         # UI primitives
-│   │   ├── context/        # React context
-│   │   ├── hooks/          # Custom hooks
-│   │   ├── layouts/        # Page layouts
-│   │   ├── pages/          # Page components
-│   │   │   └── admin/      # Admin dashboard
-│   │   ├── services/       # API service
-│   │   ├── utils/          # Helpers & constants
-│   │   ├── App.jsx         # Router setup
-│   │   ├── main.jsx        # Entry point
-│   │   └── index.css       # Global styles
-│   ├── .env.example
-│   ├── tailwind.config.js
-│   └── package.json
-└── README.md
+├── app/                    # Next.js App Router (all public + admin routes)
+│   ├── layout.tsx          # Root layout: fonts, static meta/JSON-LD, providers
+│   ├── (site)/             # Public routes → render views/* in MainLayout
+│   └── admin/              # Admin routes → views/admin/* in AdminLayout
+├── pages/
+│   ├── api/[...path].ts    # Express app mounted at /api (bodyParser off)
+│   └── api/__sitemap.ts    # /sitemap.xml via rewrite in next.config.mjs
+├── components/             # Shared React components (common/layout/admin/ui/…)
+├── layouts/                # MainLayout + AdminLayout
+├── views/                  # Page components (21 public + 19 admin)
+├── context/                # Auth / Settings / PageSeo contexts
+├── hooks/  utils/  services/  # Hooks, helpers, react-router compat, API client
+├── server/                 # Express API (config, models, routes, controllers)
+├── scripts/                # seed/migrate/verify/e2e tooling (run with tsx)
+├── public/  assets/        # Static files + logo
+└── supabase/migrations/    # Generated *_init_schema.sql (supabase db push)
 ```
 
 ## API Endpoints
@@ -203,6 +150,7 @@ eduvia-consultancy/
 | GET | `/api/faqs` | List FAQs |
 | GET | `/api/settings` | Site settings |
 | GET | `/api/search` | Global search |
+| GET | `/sitemap.xml` | Sitemap (Express route behind a rewrite) |
 
 ### Admin (Requires JWT)
 | Method | Endpoint | Description |
@@ -231,40 +179,26 @@ eduvia-consultancy/
 ## Production Build
 
 ```bash
-# Build frontend
-cd frontend
 npm run build
-
-# The build output is in frontend/dist/
-# Serve with nginx or deploy to Vercel
+npm start          # serves http://localhost:3000
+npm run e2e        # optional end-to-end verification
 ```
 
-## Deployment (Vercel + Render) — eduviaconsultancy.com
+## Deployment (Vercel) — eduviaconsultancy.com
 
-Architecture: the SPA is served by **Vercel** at the apex domain; `vercel.json`
-proxies `/api/*` and `/sitemap.xml` to the Express API on **Render**
-(`https://eduvia-api.onrender.com`), which talks to Supabase Postgres through
-the IPv4 Session pooler. The proxy means same-origin requests — no CORS
-issues and no frontend env vars to configure.
+One deployment: Vercel detects Next.js at the repo root — no config files,
+no second service. The Express API runs inside the same serverless functions
+as the pages, talking to Supabase through the IPv4 Session pooler.
 
-### 1. Render (backend)
 1. Push the repo to GitHub.
-2. In [Render](https://dashboard.render.com): **New → Blueprint** → connect the
-   repo. Render detects `render.yaml` (service `eduvia-api`, region Singapore,
-   health check `/api/health`).
-3. When prompted, set `SUPABASE_DB_URL` to the **Session pooler** URI
-   (Supabase → Project Settings → Database → Connection string → Session
-   pooler; port 6543, username `postgres.<project-ref>`).
-4. Deploy, then confirm `https://eduvia-api.onrender.com/api/health` returns
-   `{"success":true,...}`.
+2. In [Vercel](https://vercel.com): **Add New → Project** → import the repo.
+   Root Directory: repo root (default); framework preset **Next.js** (auto).
+3. Set environment variables: `SUPABASE_DB_URL`, `JWT_SECRET` (Production and
+   Preview), optionally `CORS_ORIGIN`, `SITE_URL`, `NEXT_PUBLIC_SITE_URL`,
+   `SITE_URL` and the Cloudinary keys.
+4. Deploy; verify the preview URL loads.
 
-### 2. Vercel (frontend)
-1. In [Vercel](https://vercel.com): **Add New → Project** → import the repo.
-   Root Directory: repo root (default). The committed `vercel.json` provides
-   install/build/output settings — accept the framework preset as-is.
-2. Deploy; verify the preview URL loads and `/api/health` through it responds.
-
-### 3. Custom domain DNS
+### Custom domain DNS
 Add these records at your domain registrar for `eduviaconsultancy.com`:
 
 | Type    | Name | Value                  | Purpose                  |
@@ -276,27 +210,25 @@ Then in Vercel → Project → **Settings → Domains**, add `eduviaconsultancy.
 and `www.eduviaconsultancy.com`, and set the apex as canonical (Vercel
 auto-redirects www → apex).
 
-Optional: add `api.eduviaconsultancy.com` as a CNAME to `eduvia-api.onrender.com`
-in Render if you ever want direct API access; the site itself does not need it.
-
-### 4. Verify
+### Verify
 - `https://eduviaconsultancy.com/` loads and lists real data
+- `https://eduviaconsultancy.com/api/blogs` returns JSON
 - `https://eduviaconsultancy.com/sitemap.xml` returns XML
-- Admin login at `/admin` (`admin@eduvia.com` / `admin123` — change after launch)
+- Admin login at `/admin/login` (`admin@eduvia.com` / `admin123` — change after launch)
 - Inquiry/contact forms write to the Supabase dashboard (Table Editor)
 
 Notes:
-- **Cold starts:** the Render free instance sleeps after ~15 min idle; the
-  first request then takes ~30-50 s. Keep it warm with a free uptime monitor
-  (e.g. UptimeRobot) pinging `/api/health` every 10 minutes.
-- **Image uploads:** add `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`,
-  `CLOUDINARY_API_SECRET` in Render → Environment if you use admin media
-  uploads (optional).
+- **Serverless + Express:** `/api/*` and `/sitemap.xml` are handled in the
+  Node.js runtime; `bodyParser` is disabled on the Next side so Express
+  (including multer uploads) parses bodies itself. Uploads are limited by the
+  function payload limit — Cloudinary uploads stay well under it.
+- **Image uploads:** add the three `CLOUDINARY_*` variables if you use admin
+  media uploads (optional).
 
 ### Database (Supabase)
 1. Create a project at supabase.com
 2. Copy the **Session pooler** URI (Project Settings → Database → Connection string → Session pooler: port 6543, username `postgres.<project-ref>`) into `SUPABASE_DB_URL`. Prefer the pooler over the direct `db.<project-ref>.supabase.co` host, which is IPv6-only and unreachable from IPv4-only machines.
-3. Apply the schema: `node backend/scripts/migrate.js` (also writes `supabase/migrations/*_init_schema.sql`)
+3. Apply the schema: `npm run migrate` (also regenerates `supabase/migrations/*_init_schema.sql`)
 4. Seed sample data: `npm run seed`
 5. Optional, for managing migrations with the Supabase CLI:
    `supabase login`, `supabase link --project-ref <project-ref>`, `supabase db push`
@@ -304,7 +236,7 @@ Notes:
 ## Features
 
 - [x] Responsive design (mobile-first)
-- [x] SEO optimized (meta tags, Open Graph, structured data)
+- [x] SEO optimized (meta tags, Open Graph, structured data, sitemap)
 - [x] Admin dashboard with CMS
 - [x] Inquiry management system
 - [x] University/course discovery
