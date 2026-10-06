@@ -11,7 +11,7 @@ class Admin extends Model {
 
   generateAuthToken() {
     return jwt.sign({ id: (this as any).id }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRE as any,
+      expiresIn: (process.env.JWT_EXPIRE || '7d') as any,
     });
   }
 }
