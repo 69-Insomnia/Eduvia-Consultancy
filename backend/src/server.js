@@ -36,10 +36,18 @@ await connectDB();
 
 const app = express();
 
+// Behind Vercel's edge and Render's load balancer, so X-Forwarded-For carries
+// client -> vercel -> render. Two trusted hops keeps req.ip (and therefore the
+// rate limiter) on the real client instead of a shared proxy IP.
+app.set('trust proxy', 2);
+
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: (process.env.CORS_ORIGIN || 'http://localhost:5173')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean),
     credentials: true,
   })
 );

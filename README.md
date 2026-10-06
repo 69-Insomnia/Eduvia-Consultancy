@@ -239,21 +239,59 @@ npm run build
 # Serve with nginx or deploy to Vercel
 ```
 
-## Deployment
+## Deployment (Vercel + Render) — eduviaconsultancy.com
 
-### Frontend (Vercel)
-1. Push to GitHub
-2. Connect repository to Vercel
-3. Set build command: `npm run build`
-4. Set output directory: `dist`
-5. Add environment variables
+Architecture: the SPA is served by **Vercel** at the apex domain; `vercel.json`
+proxies `/api/*` and `/sitemap.xml` to the Express API on **Render**
+(`https://eduvia-api.onrender.com`), which talks to Supabase Postgres through
+the IPv4 Session pooler. The proxy means same-origin requests — no CORS
+issues and no frontend env vars to configure.
 
-### Backend (Render/Railway)
-1. Push to GitHub
-2. Create new Web Service
-3. Set build command: `npm install`
-4. Set start command: `npm start`
-5. Add environment variables
+### 1. Render (backend)
+1. Push the repo to GitHub.
+2. In [Render](https://dashboard.render.com): **New → Blueprint** → connect the
+   repo. Render detects `render.yaml` (service `eduvia-api`, region Singapore,
+   health check `/api/health`).
+3. When prompted, set `SUPABASE_DB_URL` to the **Session pooler** URI
+   (Supabase → Project Settings → Database → Connection string → Session
+   pooler; port 6543, username `postgres.<project-ref>`).
+4. Deploy, then confirm `https://eduvia-api.onrender.com/api/health` returns
+   `{"success":true,...}`.
+
+### 2. Vercel (frontend)
+1. In [Vercel](https://vercel.com): **Add New → Project** → import the repo.
+   Root Directory: repo root (default). The committed `vercel.json` provides
+   install/build/output settings — accept the framework preset as-is.
+2. Deploy; verify the preview URL loads and `/api/health` through it responds.
+
+### 3. Custom domain DNS
+Add these records at your domain registrar for `eduviaconsultancy.com`:
+
+| Type    | Name | Value                  | Purpose                  |
+|---------|------|------------------------|--------------------------|
+| A       | `@`  | `76.76.21.21`          | apex → Vercel            |
+| CNAME   | `www`| `cname.vercel-dns.com` | www → Vercel             |
+
+Then in Vercel → Project → **Settings → Domains**, add `eduviaconsultancy.com`
+and `www.eduviaconsultancy.com`, and set the apex as canonical (Vercel
+auto-redirects www → apex).
+
+Optional: add `api.eduviaconsultancy.com` as a CNAME to `eduvia-api.onrender.com`
+in Render if you ever want direct API access; the site itself does not need it.
+
+### 4. Verify
+- `https://eduviaconsultancy.com/` loads and lists real data
+- `https://eduviaconsultancy.com/sitemap.xml` returns XML
+- Admin login at `/admin` (`admin@eduvia.com` / `admin123` — change after launch)
+- Inquiry/contact forms write to the Supabase dashboard (Table Editor)
+
+Notes:
+- **Cold starts:** the Render free instance sleeps after ~15 min idle; the
+  first request then takes ~30-50 s. Keep it warm with a free uptime monitor
+  (e.g. UptimeRobot) pinging `/api/health` every 10 minutes.
+- **Image uploads:** add `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`,
+  `CLOUDINARY_API_SECRET` in Render → Environment if you use admin media
+  uploads (optional).
 
 ### Database (Supabase)
 1. Create a project at supabase.com
