@@ -77,7 +77,7 @@ cp .env.example .env
 ```
 
 Required variables:
-- `SUPABASE_DB_URL` — Supabase Postgres connection string (Project Settings → Database → Connection string → URI)
+- `SUPABASE_DB_URL` — Supabase Postgres connection string. Use the **Session pooler** URI (Project Settings → Database → Connection string → Session pooler, port 6543, username `postgres.<project-ref>`); it has IPv4 addresses. The direct host (`db.<project-ref>.supabase.co`) is IPv6-only and fails with `ENOTFOUND` on IPv4-only networks. SSL is configured in `config/db.js`, so drop any `?sslmode=` query parameter from the URI.
 - `JWT_SECRET` — Secret key for JWT tokens
 - `CORS_ORIGIN` — Frontend URL (http://localhost:5173)
 
@@ -257,7 +257,7 @@ npm run build
 
 ### Database (Supabase)
 1. Create a project at supabase.com
-2. Copy the Postgres URI (Project Settings → Database → Connection string) into `SUPABASE_DB_URL`
+2. Copy the **Session pooler** URI (Project Settings → Database → Connection string → Session pooler: port 6543, username `postgres.<project-ref>`) into `SUPABASE_DB_URL`. Prefer the pooler over the direct `db.<project-ref>.supabase.co` host, which is IPv6-only and unreachable from IPv4-only machines.
 3. Apply the schema: `node backend/scripts/migrate.js` (also writes `supabase/migrations/*_init_schema.sql`)
 4. Seed sample data: `npm run seed`
 5. Optional, for managing migrations with the Supabase CLI:
