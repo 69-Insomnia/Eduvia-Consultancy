@@ -1,7 +1,7 @@
 /**
  * Additive import of UK institutions and their listed courses.
  *
- * Unlike `npm run seed`, this never calls deleteMany() — it inserts only what is
+ * Unlike `npm run seed`, this never deletes existing rows — it inserts only what is
  * missing and leaves every other collection untouched. Safe to re-run: an
  * institution or course that already exists is skipped, so edits made in the
  * admin panel are never clobbered.
@@ -16,7 +16,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import mongoose from 'mongoose';
+import connectDB, { sequelize } from '../src/config/db.js';
 import University from '../src/models/University.js';
 import Course from '../src/models/Course.js';
 import { makeSeoFromEntity } from '../src/utils/seoDefaults.js';
@@ -568,8 +568,8 @@ const buildCourse = (row, universityId) => ({
 
 const run = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB connected.');
+    await connectDB();
+    console.log('PostgreSQL connected.');
 
     // Group the course rows under their institution, preserving listing order.
     const grouped = new Map();
@@ -588,35 +588,39 @@ const run = async () => {
 
     for (const [key, rows] of grouped) {
       const data = buildUniversity(key, rows);
-      let university = await University.findOne({ name: data.name });
+      let university = await University.findOne({ where: { name: data.name } });
 
       if (university) {
         unisExisting++;
         console.log(`  · university exists, left untouched: ${data.name}`);
       } else {
-        university = new University(data);
-        // save() rather than findOneAndUpdate so the pre-save hook assigns a slug.
-        await university.save();
+        university = await University.create(data);
+        // create() rather than an update so the beforeCreate hook assigns a slug.
         unisAdded++;
         console.log(`  + university added: ${data.name} (${rows.length} programme${rows.length > 1 ? 's' : ''})`);
       }
 
       for (const row of rows) {
-        const existing = await Course.findOne({ name: row.name, universities: university._id });
+        const existing = await Course.findOne({
+          where: { name: row.name },
+          include: [{ model: University, as: 'universities', where: { id: university.id }, attributes: [], required: true }],
+        });
         if (existing) {
           coursesExisting++;
           console.log(`      · course exists, skipped: ${row.name}`);
           continue;
         }
-        await new Course(buildCourse(row, university._id)).save();
+        const { universities, ...courseData } = buildCourse(row, university.id);
+        const course = await Course.create(courseData);
+        await course.setUniversities(universities);
         coursesAdded++;
         console.log(`      + course added: ${row.name}`);
       }
     }
 
     const [uniTotal, courseTotal] = await Promise.all([
-      University.countDocuments(),
-      Course.countDocuments(),
+      University.count(),
+      Course.count(),
     ]);
 
     console.log('\nSummary');
@@ -624,11 +628,11 @@ const run = async () => {
     console.log(`  courses:      ${coursesAdded} added, ${coursesExisting} already present`);
     console.log(`  collection totals now: ${uniTotal} universities, ${courseTotal} courses`);
 
-    await mongoose.disconnect();
+    await sequelize.close();
     console.log('Done.');
   } catch (error) {
     console.error('Import failed:', error.message);
-    await mongoose.disconnect().catch(() => {});
+    await sequelize.close().catch(() => {});
     process.exitCode = 1;
   }
 };

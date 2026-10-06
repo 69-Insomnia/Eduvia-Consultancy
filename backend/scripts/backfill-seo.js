@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import mongoose from 'mongoose';
+import connectDB, { sequelize } from '../src/config/db.js';
 import University from '../src/models/University.js';
 import Course from '../src/models/Course.js';
 import Destination from '../src/models/Destination.js';
@@ -18,7 +18,7 @@ import { makeSeoFromEntity } from '../src/utils/seoDefaults.js';
  * change stays without it. This fills only the gaps and never overwrites SEO an
  * editor has authored in the admin.
  *
- * Uses a cursor plus save() rather than updateMany because the values are
+ * Uses findAll() plus save() rather than updateMany because the values are
  * computed per document from its own fields. It never touches slugs.
  */
 
@@ -33,8 +33,8 @@ const TARGETS = [
 
 const run = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB connected.');
+    await connectDB();
+    console.log('PostgreSQL connected.');
 
     let totalUpdated = 0;
 
@@ -42,7 +42,7 @@ const run = async () => {
       let updated = 0;
       let skipped = 0;
 
-      for await (const doc of model.find().cursor()) {
+      for (const doc of await model.findAll()) {
         if (doc.seo?.title) {
           skipped++;
           continue;
@@ -59,7 +59,7 @@ const run = async () => {
           continue;
         }
 
-        doc.seo = { ...(doc.seo?.toObject?.() || doc.seo || {}), ...seo };
+        doc.seo = { ...(doc.seo || {}), ...seo };
         await doc.save();
         updated++;
       }
@@ -73,7 +73,7 @@ const run = async () => {
     console.error('Backfill failed:', error);
     process.exitCode = 1;
   } finally {
-    await mongoose.disconnect();
+    await sequelize.close();
   }
 };
 

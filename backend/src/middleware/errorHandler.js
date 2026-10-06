@@ -9,15 +9,31 @@ const errorHandler = (err, req, res, _next) => {
     return res.status(404).json({ success: false, message: error.message });
   }
 
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyValue)[0];
+  // Postgres: invalid uuid input — the equivalent of a Mongo CastError.
+  if (err.name === 'SequelizeDatabaseError' && err.original?.code === '22P02') {
+    const match = /invalid input (?:value|syntax) for type uuid: "([^"]+)"/.exec(err.original?.message || err.message || '');
+    const value = match ? match[1] : 'unknown';
+    return res
+      .status(404)
+      .json({ success: false, message: `Resource not found with id ${value}` });
+  }
+
+  if (err.code === 11000 || err.name === 'SequelizeUniqueConstraintError') {
+    const field =
+      (err.fields && Object.keys(err.fields)[0]) || err.errors?.[0]?.path || 'value';
     error.message = `Duplicate value for field '${field}'. Please use another value`;
     return res.status(400).json({ success: false, message: error.message });
   }
 
-  if (err.name === 'ValidationError') {
-    const messages = Object.values(err.errors).map((e) => e.message);
+  if (err.name === 'ValidationError' || err.name === 'SequelizeValidationError') {
+    const messages = err.errors.map((e) => e.message);
     return res.status(400).json({ success: false, message: messages.join(', ') });
+  }
+
+  if (err.name === 'SequelizeForeignKeyConstraintError') {
+    error.message =
+      err.parent?.detail || 'Cannot delete or update a record that is referenced elsewhere';
+    return res.status(400).json({ success: false, message: error.message });
   }
 
   if (err.name === 'JsonWebTokenError') {

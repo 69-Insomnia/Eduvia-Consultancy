@@ -1,4 +1,5 @@
 import slugifyLib from 'slugify';
+import { Op } from 'sequelize';
 
 const generateUniqueSlug = async (name, Model, existingId = null) => {
   let base = slugifyLib(name, { lower: true, strict: true });
@@ -6,11 +7,9 @@ const generateUniqueSlug = async (name, Model, existingId = null) => {
   let counter = 1;
 
   while (true) {
-    const query = { slug };
-    if (existingId) {
-      query._id = { $ne: existingId };
-    }
-    const existing = await Model.findOne(query).lean();
+    const where = { slug };
+    if (existingId) where.id = { [Op.ne]: existingId };
+    const existing = await Model.findOne({ where });
     if (!existing) return slug;
     slug = `${base}-${counter}`;
     counter++;

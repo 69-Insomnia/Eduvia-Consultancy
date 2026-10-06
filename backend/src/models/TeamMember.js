@@ -1,57 +1,86 @@
-import mongoose from 'mongoose';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape } from '../utils/shape.js';
 
-const teamMemberSchema = new mongoose.Schema(
+class TeamMember extends Model {}
+
+TeamMember.init(
   {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     name: {
-      type: String,
-      required: [true, 'Name is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('name', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Name is required' } },
     },
     position: {
-      type: String,
-      required: [true, 'Position is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('position', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Position is required' } },
     },
     avatar: {
-      type: String,
-      default: '',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: '',
     },
     bio: {
-      type: String,
-      default: '',
+      type: DataTypes.TEXT,
+      allowNull: false,
+      defaultValue: '',
     },
     specialization: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('specialization', typeof v === 'string' ? v.trim() : v);
+      },
     },
     email: {
-      type: String,
-      trim: true,
-      lowercase: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('email', typeof v === 'string' ? v.trim().toLowerCase() : v);
+      },
     },
     phone: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('phone', typeof v === 'string' ? v.trim() : v);
+      },
     },
     socialLinks: {
-      linkedin: { type: String },
-      facebook: { type: String },
-      twitter: { type: String },
-      instagram: { type: String },
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => ({}),
     },
     order: {
-      type: Number,
-      default: 0,
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
     },
     isActive: {
-      type: Boolean,
-      default: true,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
     },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'TeamMember',
+    tableName: 'teammembers',
+    timestamps: true,
+    underscored: true,
+    indexes: [{ fields: ['order'] }],
+  }
 );
 
-teamMemberSchema.index({ order: 1 });
+applyApiShape(TeamMember);
 
-const TeamMember = mongoose.model('TeamMember', teamMemberSchema);
 export default TeamMember;

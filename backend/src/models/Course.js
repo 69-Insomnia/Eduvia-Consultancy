@@ -1,88 +1,135 @@
-import mongoose from 'mongoose';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape, applySeoDefaults } from '../utils/shape.js';
 import generateUniqueSlug from '../utils/slugify.js';
-import seoFields from './schemas/seoFields.js';
+import University from './University.js';
 
-const courseSchema = new mongoose.Schema(
+const DEGREE_LEVELS = ['bachelor', 'master', 'phd', 'diploma', 'certificate'];
+
+class Course extends Model {}
+
+Course.init(
   {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     name: {
-      type: String,
-      required: [true, 'Course name is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('name', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Course name is required' } },
     },
     slug: {
-      type: String,
+      type: DataTypes.STRING,
       unique: true,
     },
     category: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('category', typeof v === 'string' ? v.trim() : v);
+      },
     },
     description: {
-      type: String,
-      default: '',
+      type: DataTypes.TEXT,
+      allowNull: false,
+      defaultValue: '',
     },
     duration: {
-      type: String,
+      type: DataTypes.STRING,
     },
     degreeLevel: {
-      type: String,
-      enum: ['bachelor', 'master', 'phd', 'diploma', 'certificate'],
-      required: [true, 'Degree level is required'],
-    },
-    countries: [{ type: String }],
-    universities: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'University',
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notNull: { msg: 'Degree level is required' },
+        isIn: { args: [DEGREE_LEVELS] },
       },
-    ],
+    },
+    countries: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
     tuitionRange: {
-      type: String,
+      type: DataTypes.STRING,
     },
     applicationFee: {
-      type: String,
+      type: DataTypes.STRING,
     },
     isFreeToApply: {
-      type: Boolean,
-      default: false,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
     scholarshipAvailable: {
-      type: Boolean,
-      default: false,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
     intake: {
-      type: String,
+      type: DataTypes.STRING,
     },
     requirements: {
-      type: String,
+      type: DataTypes.TEXT,
     },
     careerOutcomes: {
-      type: String,
+      type: DataTypes.TEXT,
     },
     isFeatured: {
-      type: Boolean,
-      default: false,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
     isActive: {
-      type: Boolean,
-      default: true,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
     },
-    seo: seoFields(),
+    seo: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => ({}),
+    },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'Course',
+    tableName: 'courses',
+    timestamps: true,
+    underscored: true,
+    indexes: [
+      { fields: ['category'] },
+      { fields: ['degree_level'] },
+      { fields: ['is_featured'] },
+      { fields: ['slug'] },
+    ],
+  }
 );
 
-courseSchema.pre('save', async function (next) {
-  if (this.isModified('name')) {
-    this.slug = await generateUniqueSlug(this.name, mongoose.model('Course'), this._id);
-  }
-  next();
+Course.belongsToMany(University, {
+  through: 'course_universities',
+  as: 'universities',
+  foreignKey: 'courseId',
+  otherKey: 'universityId',
 });
 
-courseSchema.index({ category: 1 });
-courseSchema.index({ degreeLevel: 1 });
-courseSchema.index({ isFeatured: 1 });
-courseSchema.index({ name: 'text', description: 'text' });
+Course.beforeCreate(async (instance) => {
+  instance.seo = applySeoDefaults(instance.seo);
+  if (instance.name) {
+    instance.slug = await generateUniqueSlug(instance.name, Course, instance.id);
+  }
+});
 
-const Course = mongoose.model('Course', courseSchema);
+Course.beforeUpdate(async (instance) => {
+  if (instance.changed('name') && instance.name) {
+    instance.slug = await generateUniqueSlug(instance.name, Course, instance.id);
+  }
+});
+
+applyApiShape(Course);
+
 export default Course;

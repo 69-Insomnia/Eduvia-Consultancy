@@ -9,7 +9,7 @@ export const getSettings = asyncHandler(async (_req, res) => {
 export const updateSettings = asyncHandler(async (req, res) => {
   let settings = await SiteSettings.findOne();
   if (!settings) {
-    settings = new SiteSettings({});
+    settings = SiteSettings.build({});
   }
 
   const allowedFields = ['company', 'contact', 'socialMedia', 'officeHours', 'statistics', 'heroSettings', 'seo', 'footerSettings'];
@@ -17,7 +17,9 @@ export const updateSettings = asyncHandler(async (req, res) => {
   for (const field of allowedFields) {
     if (req.body[field] !== undefined) {
       if (typeof req.body[field] === 'object' && !Array.isArray(req.body[field])) {
-        settings[field] = { ...settings[field].toObject(), ...req.body[field] };
+        // JSONB fields come back as plain objects, so a spread replaces the
+        // same keys a Mongoose subdocument merge did.
+        settings[field] = { ...(settings[field] || {}), ...req.body[field] };
       } else {
         settings[field] = req.body[field];
       }

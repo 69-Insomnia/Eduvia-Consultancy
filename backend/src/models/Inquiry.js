@@ -1,84 +1,134 @@
-import mongoose from 'mongoose';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape } from '../utils/shape.js';
+import Admin from './Admin.js';
 
-const noteSchema = new mongoose.Schema({
-  text: { type: String, required: true },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
-  createdAt: { type: Date, default: Date.now },
-});
+const SOURCE_VALUES = ['website', 'facebook', 'instagram', 'referral', 'walk-in', 'other'];
+const STATUS_VALUES = [
+  'new',
+  'contacted',
+  'counselingScheduled',
+  'profileEvaluated',
+  'applicationStarted',
+  'converted',
+  'closed',
+];
 
-const inquirySchema = new mongoose.Schema(
+class Inquiry extends Model {}
+
+Inquiry.init(
   {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     fullName: {
-      type: String,
-      required: [true, 'Full name is required'],
-      trim: true,
-      maxlength: [100, 'Name cannot exceed 100 characters'],
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      set(v) {
+        this.setDataValue('fullName', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: {
+        notNull: { msg: 'Full name is required' },
+        len: { args: [1, 100], msg: 'Name cannot exceed 100 characters' },
+      },
     },
     phone: {
-      type: String,
-      required: [true, 'Phone number is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('phone', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Phone number is required' } },
     },
     email: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('email', typeof v === 'string' ? v.trim().toLowerCase() : v);
+      },
+      validate: {
+        validEmail(value) {
+          if (value && !/^\S+@\S+\.\S+$/.test(value)) {
+            throw new Error('Please provide a valid email');
+          }
+        },
+      },
     },
     preferredCountry: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('preferredCountry', typeof v === 'string' ? v.trim() : v);
+      },
     },
     highestEducation: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('highestEducation', typeof v === 'string' ? v.trim() : v);
+      },
     },
     interestedCourse: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('interestedCourse', typeof v === 'string' ? v.trim() : v);
+      },
     },
     preferredIntake: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('preferredIntake', typeof v === 'string' ? v.trim() : v);
+      },
     },
     englishTest: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('englishTest', typeof v === 'string' ? v.trim() : v);
+      },
     },
     message: {
-      type: String,
-      trim: true,
+      type: DataTypes.TEXT,
+      set(v) {
+        this.setDataValue('message', typeof v === 'string' ? v.trim() : v);
+      },
     },
     source: {
-      type: String,
-      enum: ['website', 'facebook', 'instagram', 'referral', 'walk-in', 'other'],
-      default: 'website',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'website',
+      validate: { isIn: { args: [SOURCE_VALUES] } },
     },
     status: {
-      type: String,
-      enum: [
-        'new',
-        'contacted',
-        'counselingScheduled',
-        'profileEvaluated',
-        'applicationStarted',
-        'converted',
-        'closed',
-      ],
-      default: 'new',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'new',
+      validate: { isIn: { args: [STATUS_VALUES] } },
     },
-    notes: [noteSchema],
-    assignedCounselor: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Admin',
+    notes: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
+    assignedCounselorId: {
+      type: DataTypes.UUID,
     },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'Inquiry',
+    tableName: 'inquiries',
+    timestamps: true,
+    underscored: true,
+    indexes: [{ fields: ['status'] }, { fields: ['created_at'] }],
+  }
 );
 
-inquirySchema.index({ status: 1 });
-inquirySchema.index({ createdAt: -1 });
-inquirySchema.index({ fullName: 'text', email: 'text', phone: 'text' });
+Inquiry.belongsTo(Admin, {
+  foreignKey: { name: 'assignedCounselorId', field: 'assigned_counselor_id' },
+  as: 'assignedCounselor',
+  onDelete: 'SET NULL',
+  onUpdate: 'CASCADE',
+});
 
-const Inquiry = mongoose.model('Inquiry', inquirySchema);
+applyApiShape(Inquiry, { assignedCounselorId: 'assignedCounselor' });
+
 export default Inquiry;

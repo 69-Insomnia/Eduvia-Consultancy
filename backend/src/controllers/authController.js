@@ -8,7 +8,7 @@ export const login = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Please provide email and password' });
   }
 
-  const admin = await Admin.findOne({ email }).select('+password');
+  const admin = await Admin.unscoped().findOne({ where: { email } });
   if (!admin) {
     return res.status(401).json({ success: false, message: 'Invalid credentials' });
   }
@@ -23,7 +23,7 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   admin.lastLogin = new Date();
-  await admin.save({ validateBeforeSave: false });
+  await admin.save();
 
   const token = admin.generateAuthToken();
 
@@ -40,7 +40,7 @@ export const login = asyncHandler(async (req, res) => {
     success: true,
     token,
     admin: {
-      id: admin._id,
+      id: admin.id,
       name: admin.name,
       email: admin.email,
       role: admin.role,
@@ -55,7 +55,7 @@ export const logout = asyncHandler(async (_req, res) => {
 });
 
 export const getMe = asyncHandler(async (req, res) => {
-  const admin = await Admin.findById(req.admin._id);
+  const admin = await Admin.findByPk(req.admin.id);
   res.json({ success: true, admin });
 });
 
@@ -74,7 +74,7 @@ export const updatePassword = asyncHandler(async (req, res) => {
       .json({ success: false, message: 'New password must be at least 6 characters' });
   }
 
-  const admin = await Admin.findById(req.admin._id).select('+password');
+  const admin = await Admin.unscoped().findByPk(req.admin.id);
   const isMatch = await admin.comparePassword(currentPassword);
 
   if (!isMatch) {

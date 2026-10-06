@@ -1,96 +1,142 @@
-import mongoose from 'mongoose';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape } from '../utils/shape.js';
+import Admin from './Admin.js';
 
-const educationSchema = new mongoose.Schema({
-  level: { type: String, required: true },
-  institution: { type: String, required: true },
-  board: { type: String },
-  percentage: { type: String },
-  year: { type: String },
-});
+const GENDER_VALUES = ['male', 'female', 'other'];
+const STATUS_VALUES = [
+  'prospect',
+  'contacted',
+  'counselingApplied',
+  'applicationSubmitted',
+  'visaApplied',
+  'visaApproved',
+  'departed',
+  'enrolled',
+];
+const SOURCE_VALUES = ['website', 'facebook', 'instagram', 'referral', 'walk-in', 'other'];
 
-const englishTestSchema = new mongoose.Schema({
-  type: { type: String, enum: ['IELTS', 'TOEFL', 'PTE', 'Duolingo', 'None', ''] },
-  score: { type: String },
-  date: { type: Date },
-});
+class Student extends Model {}
 
-const studentSchema = new mongoose.Schema(
+Student.init(
   {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Admin',
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    userId: {
+      type: DataTypes.UUID,
     },
     firstName: {
-      type: String,
-      required: [true, 'First name is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('firstName', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'First name is required' } },
     },
     lastName: {
-      type: String,
-      required: [true, 'Last name is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('lastName', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Last name is required' } },
     },
     email: {
-      type: String,
-      required: [true, 'Email is required'],
+      type: DataTypes.STRING,
+      allowNull: false,
       unique: true,
-      lowercase: true,
-      trim: true,
+      set(v) {
+        this.setDataValue('email', typeof v === 'string' ? v.trim().toLowerCase() : v);
+      },
+      validate: {
+        notNull: { msg: 'Email is required' },
+        is: { args: /^\S+@\S+\.\S+$/, msg: 'Please provide a valid email' },
+      },
     },
     phone: {
-      type: String,
-      required: [true, 'Phone is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('phone', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Phone is required' } },
     },
     address: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('address', typeof v === 'string' ? v.trim() : v);
+      },
     },
     dateOfBirth: {
-      type: Date,
+      type: DataTypes.DATE,
     },
     gender: {
-      type: String,
-      enum: ['male', 'female', 'other'],
+      type: DataTypes.STRING,
+      validate: { isIn: { args: [GENDER_VALUES] } },
     },
     nationality: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('nationality', typeof v === 'string' ? v.trim() : v);
+      },
     },
     passportNumber: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('passportNumber', typeof v === 'string' ? v.trim() : v);
+      },
     },
-    education: [educationSchema],
-    englishTest: englishTestSchema,
-    preferredCountries: [{ type: String }],
-    preferredCourses: [{ type: String }],
+    education: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
+    englishTest: {
+      type: DataTypes.JSONB,
+    },
+    preferredCountries: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
+    preferredCourses: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
     status: {
-      type: String,
-      enum: [
-        'prospect',
-        'contacted',
-        'counselingApplied',
-        'applicationSubmitted',
-        'visaApplied',
-        'visaApproved',
-        'departed',
-        'enrolled',
-      ],
-      default: 'prospect',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'prospect',
+      validate: { isIn: { args: [STATUS_VALUES] } },
     },
     source: {
-      type: String,
-      enum: ['website', 'facebook', 'instagram', 'referral', 'walk-in', 'other'],
-      default: 'website',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'website',
+      validate: { isIn: { args: [SOURCE_VALUES] } },
     },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'Student',
+    tableName: 'students',
+    timestamps: true,
+    underscored: true,
+    indexes: [{ fields: ['status'] }, { fields: ['created_at'] }],
+  }
 );
 
-studentSchema.index({ status: 1 });
-studentSchema.index({ createdAt: -1 });
-studentSchema.index({ firstName: 'text', lastName: 'text', email: 'text' });
+Student.belongsTo(Admin, {
+  foreignKey: { name: 'userId', field: 'user_id' },
+  as: 'user',
+  onDelete: 'SET NULL',
+  onUpdate: 'CASCADE',
+});
 
-const Student = mongoose.model('Student', studentSchema);
+applyApiShape(Student, { userId: 'user' });
+
 export default Student;

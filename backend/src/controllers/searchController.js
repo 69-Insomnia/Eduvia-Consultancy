@@ -1,8 +1,10 @@
+import { Op } from 'sequelize';
 import Destination from '../models/Destination.js';
 import University from '../models/University.js';
 import Course from '../models/Course.js';
 import Blog from '../models/Blog.js';
 import asyncHandler from '../middleware/asyncHandler.js';
+import { iLike, jsonTextILike } from '../utils/search.js';
 
 export const globalSearch = asyncHandler(async (req, res) => {
   const { q } = req.query;
@@ -11,21 +13,39 @@ export const globalSearch = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Search query must be at least 2 characters' });
   }
 
-  const regex = { $regex: q, $options: 'i' };
-
   const [destinations, universities, courses, blogs] = await Promise.all([
-    Destination.find({ isActive: true, $or: [{ name: regex }, { description: regex }] })
-      .limit(5)
-      .select('name slug shortDescription image flag'),
-    University.find({ isActive: true, $or: [{ name: regex }, { country: regex }, { city: regex }] })
-      .limit(5)
-      .select('name slug country city logo'),
-    Course.find({ isActive: true, $or: [{ name: regex }, { category: regex }, { description: regex }] })
-      .limit(5)
-      .select('name slug category degreeLevel duration'),
-    Blog.find({ isPublished: true, $or: [{ title: regex }, { excerpt: regex }, { tags: regex }] })
-      .limit(5)
-      .select('title slug featuredImage excerpt category'),
+    Destination.findAll({
+      where: {
+        isActive: true,
+        [Op.or]: [{ name: iLike(q) }, { description: iLike(q) }],
+      },
+      limit: 5,
+      attributes: ['id', 'name', 'slug', 'shortDescription', 'image', 'flag'],
+    }),
+    University.findAll({
+      where: {
+        isActive: true,
+        [Op.or]: [{ name: iLike(q) }, { country: iLike(q) }, { city: iLike(q) }],
+      },
+      limit: 5,
+      attributes: ['id', 'name', 'slug', 'country', 'city', 'logo'],
+    }),
+    Course.findAll({
+      where: {
+        isActive: true,
+        [Op.or]: [{ name: iLike(q) }, { category: iLike(q) }, { description: iLike(q) }],
+      },
+      limit: 5,
+      attributes: ['id', 'name', 'slug', 'category', 'degreeLevel', 'duration'],
+    }),
+    Blog.findAll({
+      where: {
+        isPublished: true,
+        [Op.or]: [{ title: iLike(q) }, { excerpt: iLike(q) }, jsonTextILike('tags', q)],
+      },
+      limit: 5,
+      attributes: ['id', 'title', 'slug', 'featuredImage', 'excerpt', 'category'],
+    }),
   ]);
 
   res.json({

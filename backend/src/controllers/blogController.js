@@ -1,6 +1,20 @@
+import { Op } from 'sequelize';
+import { sequelize } from '../config/db.js';
 import Blog from '../models/Blog.js';
 import asyncHandler from '../middleware/asyncHandler.js';
 import paginate from '../utils/pagination.js';
+import { iLike, jsonTextILike } from '../utils/search.js';
+import { cleanBody } from '../utils/shape.js';
+
+const RELATED_SHORT = ['id', 'title', 'slug', 'featuredImage', 'excerpt'];
+const RELATED_SHORTER = ['id', 'title', 'slug', 'excerpt'];
+
+const relatedInclude = (attributes) => ({
+  model: Blog,
+  as: 'relatedPosts',
+  attributes,
+  through: { attributes: [] },
+});
 
 export const getBlogs = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, search, category, tag, isPublished, featured } = req.query;
@@ -17,35 +31,40 @@ export const getBlogs = asyncHandler(async (req, res) => {
   } else {
     filter.isPublished = true;
   }
-  // The Blog model has no `isFeatured` path; this only ever matched nothing, so
+  // The Blog model has no `isFeatured` attribute; this only ever matched nothing, so
   // it is left alone rather than silently filtering out every result.
-  if (featured === 'true' && Blog.schema.paths.isFeatured) filter.isFeatured = true;
+  if (featured === 'true' && Blog.rawAttributes.isFeatured) filter.isFeatured = true;
   if (category) filter.category = category;
-  if (tag) filter.tags = { $in: [tag] };
+  if (tag) filter.tags = { [Op.contains]: [tag] };
   if (search) {
-    filter.$or = [
-      { title: { $regex: search, $options: 'i' } },
-      { excerpt: { $regex: search, $options: 'i' } },
-      { tags: { $regex: search, $options: 'i' } },
+    filter[Op.or] = [
+      { title: iLike(search) },
+      { excerpt: iLike(search) },
+      jsonTextILike('tags', search),
     ];
   }
 
   const { skip, setTotal } = paginate(page, limit);
-  const total = await Blog.countDocuments(filter);
-  const blogs = await Blog.find(filter)
-    .sort({ publishedAt: -1, createdAt: -1 })
-    .skip(skip)
-    .limit(setTotal(total).limit)
-    .select('-content');
+  const total = await Blog.count({ where: filter });
+  const blogs = await Blog.findAll({
+    where: filter,
+    order: [
+      ['publishedAt', 'DESC NULLS LAST'],
+      ['createdAt', 'DESC NULLS LAST'],
+    ],
+    offset: skip,
+    limit: setTotal(total).limit,
+    attributes: { exclude: ['content'] },
+  });
 
   res.json({ success: true, blogs, pagination: setTotal(total) });
 });
 
 export const getBlogBySlug = asyncHandler(async (req, res) => {
-  const blog = await Blog.findOne({ slug: req.params.slug, isPublished: true }).populate(
-    'relatedPosts',
-    'title slug featuredImage excerpt'
-  );
+  const blog = await Blog.findOne({
+    where: { slug: req.params.slug, isPublished: true },
+    include: [relatedInclude(RELATED_SHORT)],
+  });
   if (!blog) {
     return res.status(404).json({ success: false, message: 'Blog not found' });
   }
@@ -53,7 +72,9 @@ export const getBlogBySlug = asyncHandler(async (req, res) => {
 });
 
 export const getBlogById = asyncHandler(async (req, res) => {
-  const blog = await Blog.findById(req.params.id).populate('relatedPosts', 'title slug excerpt');
+  const blog = await Blog.findByPk(req.params.id, {
+    include: [relatedInclude(RELATED_SHORTER)],
+  });
   if (!blog) {
     return res.status(404).json({ success: false, message: 'Blog not found' });
   }
@@ -66,66 +87,74 @@ export const createBlog = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Title and content are required' });
   }
 
-  const blog = await Blog.create(req.body);
+  const { relatedPosts, ...data } = cleanBody(req.body);
+  let blog = await Blog.create(data);
+  if (relatedPosts !== undefined) {
+    await blog.setRelatedPosts(relatedPosts || []);
+    blog = await Blog.findByPk(blog.id, { include: [relatedInclude(RELATED_SHORTER)] });
+  }
   res.status(201).json({ success: true, blog });
 });
 
 export const updateBlog = asyncHandler(async (req, res) => {
-  // save() rather than findByIdAndUpdate: the pre-save hook regenerates the slug
+  // save() rather than update(): the beforeUpdate hook regenerates the slug
   // on a title change and stamps publishedAt on publish, both of which
-  // findByIdAndUpdate skips.
-  const blog = await Blog.findById(req.params.id);
-  if (blog) {
-    const { _id, ...updates } = req.body;
-    Object.assign(blog, updates);
-    await blog.save();
-  }
+  // a bulk update skips.
+  const blog = await Blog.findByPk(req.params.id);
   if (!blog) {
     return res.status(404).json({ success: false, message: 'Blog not found' });
   }
-  res.json({ success: true, blog });
+  const { relatedPosts, ...updates } = cleanBody(req.body);
+  blog.set(updates);
+  await blog.save();
+  if (relatedPosts !== undefined) {
+    await blog.setRelatedPosts(relatedPosts || []);
+  }
+  const reloaded = await Blog.findByPk(blog.id, { include: [relatedInclude(RELATED_SHORTER)] });
+  res.json({ success: true, blog: reloaded });
 });
 
 export const deleteBlog = asyncHandler(async (req, res) => {
-  const blog = await Blog.findByIdAndDelete(req.params.id);
+  const blog = await Blog.findByPk(req.params.id);
   if (!blog) {
     return res.status(404).json({ success: false, message: 'Blog not found' });
   }
+  await blog.destroy();
   res.json({ success: true, message: 'Blog deleted successfully' });
 });
 
 export const publishBlog = asyncHandler(async (req, res) => {
-  const blog = await Blog.findByIdAndUpdate(
-    req.params.id,
-    { isPublished: true, publishedAt: new Date() },
-    { new: true }
-  );
+  const blog = await Blog.findByPk(req.params.id);
   if (!blog) {
     return res.status(404).json({ success: false, message: 'Blog not found' });
   }
+  blog.isPublished = true;
+  blog.publishedAt = new Date();
+  await blog.save();
   res.json({ success: true, blog });
 });
 
 export const unpublishBlog = asyncHandler(async (req, res) => {
-  const blog = await Blog.findByIdAndUpdate(
-    req.params.id,
-    { isPublished: false },
-    { new: true }
-  );
+  const blog = await Blog.findByPk(req.params.id);
   if (!blog) {
     return res.status(404).json({ success: false, message: 'Blog not found' });
   }
+  blog.isPublished = false;
+  await blog.save();
   res.json({ success: true, blog });
 });
 
 export const incrementViews = asyncHandler(async (req, res) => {
-  const blog = await Blog.findOneAndUpdate(
-    { slug: req.params.slug, isPublished: true },
-    { $inc: { views: 1 } },
-    { new: true }
+  const [count] = await Blog.update(
+    { views: sequelize.literal('views + 1') },
+    { where: { slug: req.params.slug, isPublished: true } }
   );
-  if (!blog) {
+  if (!count) {
     return res.status(404).json({ success: false, message: 'Blog not found' });
   }
+  const blog = await Blog.findOne({
+    where: { slug: req.params.slug, isPublished: true },
+    attributes: ['id', 'views'],
+  });
   res.json({ success: true, views: blog.views });
 });

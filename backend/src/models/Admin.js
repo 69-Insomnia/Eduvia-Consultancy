@@ -1,64 +1,97 @@
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+﻿import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape } from '../utils/shape.js';
 
-const adminSchema = new mongoose.Schema(
+class Admin extends Model {
+  comparePassword(candidatePassword) {
+    return bcrypt.compare(candidatePassword, this.password);
+  }
+
+  generateAuthToken() {
+    return jwt.sign({ id: this.id }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRE,
+    });
+  }
+}
+
+Admin.init(
   {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     name: {
-      type: String,
-      required: [true, 'Name is required'],
-      trim: true,
-      maxlength: [100, 'Name cannot exceed 100 characters'],
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      set(v) {
+        this.setDataValue('name', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: {
+        notNull: { msg: 'Name is required' },
+        len: { args: [1, 100], msg: 'Name cannot exceed 100 characters' },
+      },
     },
     email: {
-      type: String,
-      required: [true, 'Email is required'],
+      type: DataTypes.STRING,
+      allowNull: false,
       unique: true,
-      lowercase: true,
-      trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
+      set(v) {
+        this.setDataValue('email', typeof v === 'string' ? v.trim().toLowerCase() : v);
+      },
+      validate: {
+        notNull: { msg: 'Email is required' },
+        is: { args: /^\S+@\S+\.\S+$/, msg: 'Please provide a valid email' },
+      },
     },
     password: {
-      type: String,
-      required: [true, 'Password is required'],
-      minlength: [6, 'Password must be at least 6 characters'],
-      select: false,
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notNull: { msg: 'Password is required' },
+        len: { args: [6, 255], msg: 'Password must be at least 6 characters' },
+      },
     },
     role: {
-      type: String,
-      enum: ['superadmin', 'admin'],
-      default: 'admin',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'admin',
+      validate: { isIn: { args: [['superadmin', 'admin']] } },
     },
     avatar: {
-      type: String,
-      default: '',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: '',
     },
     isActive: {
-      type: Boolean,
-      default: true,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
     },
     lastLogin: {
-      type: Date,
+      type: DataTypes.DATE,
     },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'Admin',
+    tableName: 'admins',
+    timestamps: true,
+    underscored: true,
+    defaultScope: { attributes: { exclude: ['password'] } },
+  }
 );
 
-adminSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
+Admin.beforeCreate(async (instance) => {
+  if (instance.password) instance.password = await bcrypt.hash(instance.password, 12);
 });
 
-adminSchema.methods.comparePassword = async function (candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
-};
+Admin.beforeUpdate(async (instance) => {
+  if (instance.changed('password')) instance.password = await bcrypt.hash(instance.password, 12);
+});
 
-adminSchema.methods.generateAuthToken = function () {
-  return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE,
-  });
-};
+applyApiShape(Admin, {}, ['password']);
 
-const Admin = mongoose.model('Admin', adminSchema);
 export default Admin;

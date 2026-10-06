@@ -1,7 +1,7 @@
 /**
  * Additive import of University of Arizona and its listed undergraduate degrees.
  *
- * Same contract as `add-uk-universities.js`: never calls deleteMany(), inserts
+ * Same contract as `add-uk-universities.js`: never deletes existing rows, inserts
  * only what is missing, and leaves every other collection untouched. Safe to
  * re-run — anything already present is skipped, so admin edits survive.
  *
@@ -25,7 +25,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import mongoose from 'mongoose';
+import connectDB, { sequelize } from '../src/config/db.js';
 import University from '../src/models/University.js';
 import Course from '../src/models/Course.js';
 import { makeSeoFromEntity } from '../src/utils/seoDefaults.js';
@@ -97,15 +97,15 @@ const INTAKE = 'Spring 2027, Fall 2027';
 
 const run = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB connected.');
+    await connectDB();
+    console.log('PostgreSQL connected.');
 
-    let university = await University.findOne({ name: INSTITUTION.name });
+    let university = await University.findOne({ where: { name: INSTITUTION.name } });
 
     if (university) {
       console.log(`  · university exists, left untouched: ${INSTITUTION.name}`);
     } else {
-      university = new University({
+      university = await University.create({
         ...INSTITUTION,
         seo: makeSeoFromEntity({ type: 'university', name: INSTITUTION.name, country: US }),
         programs: COURSES.map((c) => ({
@@ -120,8 +120,7 @@ const run = async () => {
         scholarships: [{ name: 'Scholarship available' }],
         tuitionRange: TUITION,
       });
-      // save() rather than findOneAndUpdate so the pre-save hook assigns a slug.
-      await university.save();
+      // create() rather than an update so the beforeCreate hook assigns a slug.
       console.log(`  + university added: ${INSTITUTION.name} (${COURSES.length} programmes)`);
     }
 
@@ -129,20 +128,23 @@ const run = async () => {
     let existing = 0;
 
     for (const course of COURSES) {
-      const found = await Course.findOne({ name: course.name, universities: university._id });
+      const found = await Course.findOne({
+        where: { name: course.name },
+        include: [{ model: University, as: 'universities', where: { id: university.id }, attributes: [], required: true }],
+      });
       if (found) {
         existing++;
         console.log(`      · course exists, skipped: ${course.name}`);
         continue;
       }
 
-      await new Course({
+      const { universities, ...courseData } = {
         seo: makeSeoFromEntity({ type: 'course', name: course.name, country: US }),
         name: course.name,
         category: course.category,
         degreeLevel: 'bachelor',
         countries: [US],
-        universities: [university._id],
+        universities: [university.id],
         tuitionRange: TUITION,
         applicationFee: APPLICATION_FEE,
         // No listing in this batch carried the "Free to apply" badge.
@@ -152,15 +154,17 @@ const run = async () => {
         intake: INTAKE,
         isFeatured: false,
         isActive: true,
-      }).save();
+      };
+      const created = await Course.create(courseData);
+      await created.setUniversities(universities);
 
       added++;
       console.log(`      + course added: ${course.name}`);
     }
 
     const [uniTotal, courseTotal] = await Promise.all([
-      University.countDocuments(),
-      Course.countDocuments(),
+      University.count(),
+      Course.count(),
     ]);
 
     console.log('\nSummary');
@@ -168,11 +172,11 @@ const run = async () => {
     console.log(`  collection totals now: ${uniTotal} universities, ${courseTotal} courses`);
     console.log(`  university slug: ${university.slug}`);
 
-    await mongoose.disconnect();
+    await sequelize.close();
     console.log('Done.');
   } catch (error) {
     console.error('Import failed:', error.message);
-    await mongoose.disconnect().catch(() => {});
+    await sequelize.close().catch(() => {});
     process.exitCode = 1;
   }
 };

@@ -1,3 +1,5 @@
+import { QueryTypes } from 'sequelize';
+import { sequelize } from '../config/db.js';
 import University from '../models/University.js';
 import Course from '../models/Course.js';
 import Destination from '../models/Destination.js';
@@ -19,54 +21,42 @@ const DESCRIPTION_MAX = 160;
  * noise that trains the editor to ignore the panel.
  */
 const TARGETS = [
-  { label: 'Universities', model: University, filter: { isActive: true }, url: (d) => `/universities/${d.slug}` },
-  { label: 'Courses', model: Course, filter: { isActive: true }, url: () => null },
-  { label: 'Destinations', model: Destination, filter: { isActive: true }, url: (d) => `/study-in/${d.slug}` },
-  { label: 'Scholarships', model: Scholarship, filter: { isActive: true }, url: () => null },
-  { label: 'Services', model: Service, filter: { isActive: true }, url: () => null },
-  { label: 'Blogs', model: Blog, filter: { isPublished: true }, url: (d) => `/blogs/${d.slug}` },
+  { label: 'Universities', model: University, whereSql: 'is_active = true', url: (d) => `/universities/${d.slug}` },
+  { label: 'Courses', model: Course, whereSql: 'is_active = true', url: () => null },
+  { label: 'Destinations', model: Destination, whereSql: 'is_active = true', url: (d) => `/study-in/${d.slug}` },
+  { label: 'Scholarships', model: Scholarship, whereSql: 'is_active = true', url: () => null },
+  { label: 'Services', model: Service, whereSql: 'is_active = true', url: () => null },
+  { label: 'Blogs', model: Blog, whereSql: 'is_published = true', url: (d) => `/blogs/${d.slug}` },
 ];
 
-const count = (match) => [{ $match: match }, { $count: 'n' }];
-const pluck = (result) => result?.[0]?.n || 0;
-
-/** Matches a field that is absent, null or an empty string. */
-const missing = (path) => ({ $or: [{ [path]: { $exists: false } }, { [path]: null }, { [path]: '' }] });
-
 /**
- * One aggregation per collection rather than shipping every document to the
- * browser to count there. `$facet` lets all the counts share a single scan.
+ * One aggregate scan per collection instead of shipping every document to the
+ * browser. `FILTER` counts mirror the old `$facet` counts exactly: a missing
+ * seo title is absent, null or an empty string.
  */
-async function auditModel({ model, filter }) {
-  const stringTitle = { $type: 'string', $ne: '' };
-  const titleLength = { $strLenCP: { $ifNull: ['$seo.title', ''] } };
-  const descriptionLength = { $strLenCP: { $ifNull: ['$seo.description', ''] } };
-
-  const [facets] = await model.aggregate([
-    { $match: filter },
-    {
-      $facet: {
-        total: [{ $count: 'n' }],
-        missingSeo: count(missing('seo.title')),
-        titleLong: count({ $expr: { $gt: [titleLength, TITLE_MAX] } }),
-        titleShort: count({
-          $and: [{ 'seo.title': stringTitle }, { $expr: { $lt: [titleLength, TITLE_MIN] } }],
-        }),
-        descriptionMissing: count(missing('seo.description')),
-        descriptionLong: count({ $expr: { $gt: [descriptionLength, DESCRIPTION_MAX] } }),
-        noindex: count({ 'seo.robots': /noindex/i }),
-      },
-    },
-  ]);
+async function auditModel({ model, whereSql }) {
+  const [row] = await sequelize.query(
+    `SELECT
+       count(*)::int AS total,
+       count(*) FILTER (WHERE seo IS NULL OR seo->>'title' IS NULL OR seo->>'title' = '')::int AS "missingSeo",
+       count(*) FILTER (WHERE length(coalesce(seo->>'title', '')) > ${TITLE_MAX})::int AS "titleLong",
+       count(*) FILTER (WHERE seo->>'title' IS NOT NULL AND seo->>'title' <> '' AND length(seo->>'title') < ${TITLE_MIN})::int AS "titleShort",
+       count(*) FILTER (WHERE seo IS NULL OR seo->>'description' IS NULL OR seo->>'description' = '')::int AS "descriptionMissing",
+       count(*) FILTER (WHERE length(coalesce(seo->>'description', '')) > ${DESCRIPTION_MAX})::int AS "descriptionLong",
+       count(*) FILTER (WHERE seo->>'robots' ~* 'noindex')::int AS noindex
+     FROM "${model.tableName}"
+     WHERE ${whereSql}`,
+    { type: QueryTypes.SELECT }
+  );
 
   return {
-    total: pluck(facets.total),
-    missingSeo: pluck(facets.missingSeo),
-    titleLong: pluck(facets.titleLong),
-    titleShort: pluck(facets.titleShort),
-    descriptionMissing: pluck(facets.descriptionMissing),
-    descriptionLong: pluck(facets.descriptionLong),
-    noindex: pluck(facets.noindex),
+    total: row.total,
+    missingSeo: row.missingSeo,
+    titleLong: row.titleLong,
+    titleShort: row.titleShort,
+    descriptionMissing: row.descriptionMissing,
+    descriptionLong: row.descriptionLong,
+    noindex: row.noindex,
   };
 }
 
@@ -79,18 +69,21 @@ async function findDuplicateTitles() {
   const seen = new Map();
 
   await Promise.all(
-    TARGETS.map(async ({ label, model, filter }) => {
-      const rows = await model.aggregate([
-        { $match: { ...filter, 'seo.title': { $type: 'string', $ne: '' } } },
-        { $group: { _id: '$seo.title', count: { $sum: 1 } } },
-        { $match: { count: { $gt: 1 } } },
-      ]);
+    TARGETS.map(async ({ label, model, whereSql }) => {
+      const rows = await sequelize.query(
+        `SELECT seo->>'title' AS title, count(*)::int AS count
+         FROM "${model.tableName}"
+         WHERE ${whereSql} AND seo->>'title' IS NOT NULL AND seo->>'title' <> ''
+         GROUP BY 1
+         HAVING count(*) > 1`,
+        { type: QueryTypes.SELECT }
+      );
 
       for (const row of rows) {
-        const entry = seen.get(row._id) || { title: row._id, count: 0, where: [] };
+        const entry = seen.get(row.title) || { title: row.title, count: 0, where: [] };
         entry.count += row.count;
         entry.where.push(label);
-        seen.set(row._id, entry);
+        seen.set(row.title, entry);
       }
     })
   );
@@ -100,8 +93,8 @@ async function findDuplicateTitles() {
 
 export const getSeoStats = asyncHandler(async (_req, res) => {
   const [audits, pageRows, duplicateTitles] = await Promise.all([
-    Promise.all(TARGETS.map(({ model, filter }) => auditModel({ model, filter }))),
-    PageSeo.find().select('key seo').lean(),
+    Promise.all(TARGETS.map((target) => auditModel(target))),
+    PageSeo.findAll({ attributes: ['id', 'key', 'seo'] }),
     findDuplicateTitles(),
   ]);
 

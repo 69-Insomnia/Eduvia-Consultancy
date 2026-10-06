@@ -1,79 +1,125 @@
-import mongoose from 'mongoose';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape, applySeoDefaults } from '../utils/shape.js';
 import generateUniqueSlug from '../utils/slugify.js';
-import seoFields from './schemas/seoFields.js';
 
-const blogSchema = new mongoose.Schema(
+class Blog extends Model {}
+
+Blog.init(
   {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     title: {
-      type: String,
-      required: [true, 'Blog title is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('title', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Blog title is required' } },
     },
     slug: {
-      type: String,
+      type: DataTypes.STRING,
       unique: true,
     },
     author: {
-      type: String,
-      default: 'Eduvia Team',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'Eduvia Team',
     },
     content: {
-      type: String,
-      required: [true, 'Blog content is required'],
+      type: DataTypes.TEXT,
+      allowNull: false,
+      validate: { notNull: { msg: 'Blog content is required' } },
     },
     excerpt: {
-      type: String,
-      maxlength: [500, 'Excerpt cannot exceed 500 characters'],
+      type: DataTypes.STRING(500),
+      validate: { len: { args: [0, 500], msg: 'Excerpt cannot exceed 500 characters' } },
     },
     featuredImage: {
-      type: String,
-      default: '',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: '',
     },
     category: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('category', typeof v === 'string' ? v.trim() : v);
+      },
     },
-    tags: [{ type: String }],
+    tags: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
     readTime: {
-      type: Number,
-      default: 5,
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 5,
     },
     isPublished: {
-      type: Boolean,
-      default: false,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
     publishedAt: {
-      type: Date,
+      type: DataTypes.DATE,
     },
-    seo: seoFields(),
+    seo: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => ({}),
+    },
     views: {
-      type: Number,
-      default: 0,
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
     },
-    relatedPosts: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Blog',
-      },
-    ],
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'Blog',
+    tableName: 'blogs',
+    timestamps: true,
+    underscored: true,
+    indexes: [
+      { fields: ['category'] },
+      { fields: ['is_published'] },
+      { fields: ['created_at'] },
+      { fields: ['slug'] },
+      { fields: ['tags'], using: 'gin' },
+    ],
+  }
 );
 
-blogSchema.pre('save', async function (next) {
-  if (this.isModified('title')) {
-    this.slug = await generateUniqueSlug(this.title, mongoose.model('Blog'), this._id);
-  }
-  if (this.isModified('isPublished') && this.isPublished && !this.publishedAt) {
-    this.publishedAt = new Date();
-  }
-  next();
+Blog.belongsToMany(Blog, {
+  through: 'blog_related_posts',
+  as: 'relatedPosts',
+  foreignKey: 'blogId',
+  otherKey: 'relatedPostId',
 });
 
-blogSchema.index({ category: 1 });
-blogSchema.index({ isPublished: 1 });
-blogSchema.index({ tags: 1 });
-blogSchema.index({ title: 'text', content: 'text' });
+Blog.beforeCreate(async (instance) => {
+  instance.seo = applySeoDefaults(instance.seo);
+  if (instance.title) {
+    instance.slug = await generateUniqueSlug(instance.title, Blog, instance.id);
+  }
+  if (instance.isPublished && !instance.publishedAt) {
+    instance.publishedAt = new Date();
+  }
+});
 
-const Blog = mongoose.model('Blog', blogSchema);
+Blog.beforeUpdate(async (instance) => {
+  if (instance.changed('title') && instance.title) {
+    instance.slug = await generateUniqueSlug(instance.title, Blog, instance.id);
+  }
+  if (instance.changed('isPublished') && instance.isPublished && !instance.publishedAt) {
+    instance.publishedAt = new Date();
+  }
+});
+
+applyApiShape(Blog);
+
 export default Blog;

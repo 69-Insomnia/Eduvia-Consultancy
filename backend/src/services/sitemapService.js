@@ -99,9 +99,9 @@ export async function buildSitemap() {
   const base = siteUrl();
 
   const [destinations, universities, blogs] = await Promise.all([
-    Destination.find({ isActive: true }).select('slug updatedAt seo.robots').lean(),
-    University.find({ isActive: true }).select('slug updatedAt seo.robots').lean(),
-    Blog.find({ isPublished: true }).select('slug publishedAt updatedAt seo.robots').lean(),
+    Destination.findAll({ where: { isActive: true }, attributes: ['id', 'slug', 'updatedAt', 'seo'] }),
+    University.findAll({ where: { isActive: true }, attributes: ['id', 'slug', 'updatedAt', 'seo'] }),
+    Blog.findAll({ where: { isPublished: true }, attributes: ['id', 'slug', 'publishedAt', 'updatedAt', 'seo'] }),
   ]);
 
   const entries = [

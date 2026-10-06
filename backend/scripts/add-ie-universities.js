@@ -2,7 +2,7 @@
  * Additive import of two Irish universities and their listed programmes, plus a
  * small enrichment of the existing Ireland destination record.
  *
- * Same contract as the UK / US / Canada scripts: never calls deleteMany(),
+ * Same contract as the UK / US / Canada scripts: never deletes existing rows,
  * inserts only what is missing, and leaves every other collection untouched.
  *
  *   npm run seed:ie
@@ -32,7 +32,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import mongoose from 'mongoose';
+import connectDB, { sequelize } from '../src/config/db.js';
 import University from '../src/models/University.js';
 import Course from '../src/models/Course.js';
 import { makeSeoFromEntity } from '../src/utils/seoDefaults.js';
@@ -155,8 +155,8 @@ const tuitionRangeFor = (fees) => {
 
 const run = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB connected.');
+    await connectDB();
+    console.log('PostgreSQL connected.');
 
     let unisAdded = 0;
     let unisExisting = 0;
@@ -167,13 +167,13 @@ const run = async () => {
       const rows = COURSES[key];
       const defaults = COLLEGE_DEFAULTS[key];
       const fees = rows.map((r) => r.fee);
-      let university = await University.findOne({ name: institution.name });
+      let university = await University.findOne({ where: { name: institution.name } });
 
       if (university) {
         unisExisting++;
         console.log(`  · university exists, left untouched: ${institution.name}`);
       } else {
-        university = new University({
+        university = await University.create({
           seo: makeSeoFromEntity({ type: 'university', name: institution.name, country: IE }),
           name: institution.name,
           country: IE,
@@ -196,26 +196,28 @@ const run = async () => {
           isFeatured: false,
           isActive: true,
         });
-        // save() rather than findOneAndUpdate so the pre-save hook assigns a slug.
-        await university.save();
+        // create() rather than an update so the beforeCreate hook assigns a slug.
         unisAdded++;
         console.log(`  + university added: ${institution.name} (${rows.length} programmes)`);
       }
 
       for (const row of rows) {
-        const found = await Course.findOne({ name: row.name, universities: university._id });
+        const found = await Course.findOne({
+          where: { name: row.name },
+          include: [{ model: University, as: 'universities', where: { id: university.id }, attributes: [], required: true }],
+        });
         if (found) {
           coursesExisting++;
           continue;
         }
 
-        await new Course({
+        const { universities, ...courseData } = {
           seo: makeSeoFromEntity({ type: 'course', name: row.name, country: IE }),
           name: row.name,
           category: row.category,
           degreeLevel: LEVEL_TO_ENUM[row.level],
           countries: [IE],
-          universities: [university._id],
+          universities: [university.id],
           tuitionRange: feeLabel(row.fee),
           applicationFee: defaults.applicationFee,
           isFreeToApply: defaults.isFreeToApply,
@@ -224,14 +226,16 @@ const run = async () => {
           intake: INTAKE,
           isFeatured: false,
           isActive: true,
-        }).save();
+        };
+        const course = await Course.create(courseData);
+        await course.setUniversities(universities);
 
         coursesAdded++;
       }
     }
 
     // Destination enrichment.
-    const destination = await Destination.findOne({ name: IE });
+    const destination = await Destination.findOne({ where: { name: IE } });
     if (!destination) {
       console.log(`  ! no "${IE}" destination found — skipping enrichment`);
     } else {
@@ -249,8 +253,8 @@ const run = async () => {
     }
 
     const [uniTotal, courseTotal] = await Promise.all([
-      University.countDocuments(),
-      Course.countDocuments(),
+      University.count(),
+      Course.count(),
     ]);
 
     console.log('\nSummary');
@@ -259,11 +263,11 @@ const run = async () => {
     console.log(`  collection totals now: ${uniTotal} universities, ${courseTotal} courses`);
     console.log(`  source rows: 48 pasted -> ${COURSES.setu.length} SETU + ${COURSES.ucc.length} UCC = ${COURSES.setu.length + COURSES.ucc.length} courses`);
 
-    await mongoose.disconnect();
+    await sequelize.close();
     console.log('Done.');
   } catch (error) {
     console.error('Import failed:', error.message);
-    await mongoose.disconnect().catch(() => {});
+    await sequelize.close().catch(() => {});
     process.exitCode = 1;
   }
 };

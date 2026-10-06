@@ -1,40 +1,68 @@
-import mongoose from 'mongoose';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape } from '../utils/shape.js';
 
-const contactMessageSchema = new mongoose.Schema(
+class ContactMessage extends Model {}
+
+ContactMessage.init(
   {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     name: {
-      type: String,
-      required: [true, 'Name is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('name', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Name is required' } },
     },
     email: {
-      type: String,
-      required: [true, 'Email is required'],
-      lowercase: true,
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('email', typeof v === 'string' ? v.trim().toLowerCase() : v);
+      },
+      validate: {
+        notNull: { msg: 'Email is required' },
+        is: { args: /^\S+@\S+\.\S+$/, msg: 'Please provide a valid email' },
+      },
     },
     phone: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('phone', typeof v === 'string' ? v.trim() : v);
+      },
     },
     subject: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('subject', typeof v === 'string' ? v.trim() : v);
+      },
     },
     message: {
-      type: String,
-      required: [true, 'Message is required'],
+      type: DataTypes.TEXT,
+      allowNull: false,
+      validate: { notNull: { msg: 'Message is required' } },
     },
     isRead: {
-      type: Boolean,
-      default: false,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'ContactMessage',
+    tableName: 'contactmessages',
+    timestamps: true,
+    underscored: true,
+    indexes: [{ fields: ['is_read'] }, { fields: ['created_at'] }],
+  }
 );
 
-contactMessageSchema.index({ isRead: 1 });
-contactMessageSchema.index({ createdAt: -1 });
+applyApiShape(ContactMessage);
 
-const ContactMessage = mongoose.model('ContactMessage', contactMessageSchema);
 export default ContactMessage;

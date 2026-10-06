@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import mongoose from 'mongoose';
+import connectDB, { sequelize } from '../config/db.js';
 import Admin from '../models/Admin.js';
 import Destination from '../models/Destination.js';
 import University from '../models/University.js';
@@ -18,24 +18,27 @@ import PageSeo from '../models/PageSeo.js';
 import { PAGES } from '../config/pages.js';
 import { makeSeoFromEntity } from '../utils/seoDefaults.js';
 
+// Sequelize v6 Model.create() only accepts a single object, so array seeds go
+// through this sequential loop — one at a time so slug-uniqueness hooks can
+// never race each other.
+const createEach = async (M, items) => {
+  const out = [];
+  for (const i of items) out.push(await M.create(i));
+  return out;
+};
+
 const seed = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB connected for seeding...');
+    await connectDB();
+    console.log('PostgreSQL connected for seeding...');
 
-    await Admin.deleteMany();
-    await Destination.deleteMany();
-    await University.deleteMany();
-    await Course.deleteMany();
-    await Scholarship.deleteMany();
-    await TeamMember.deleteMany();
-    await FAQ.deleteMany();
-    await Service.deleteMany();
-    await SiteSettings.deleteMany();
-    await PageSeo.deleteMany();
-    await Testimonial.deleteMany();
-    await SuccessStory.deleteMany();
-    await Blog.deleteMany();
+    // CASCADE also sweeps the junction/child tables that reference the seeded
+    // ones (course_universities, blog links, applications, students, inquiries,
+    // media) — the same reset semantics a full wipe had, minus orphans in
+    // tables that have no FK back to a seeded table.
+    await sequelize.query(
+      'TRUNCATE TABLE "admins", "destinations", "universities", "courses", "scholarships", "teammembers", "faqs", "services", "sitesettings", "pageseos", "testimonials", "successstories", "blogs" RESTART IDENTITY CASCADE',
+    );
 
     console.log('Cleared existing data');
 
@@ -483,7 +486,8 @@ const seed = async () => {
       },
     ];
 
-    const destinations = await Destination.create(
+    const destinations = await createEach(
+      Destination,
       destinationData.map((d) => ({ ...d, seo: d.seo || makeSeoFromEntity({ type: 'destination', name: d.name }) })),
     );
 
@@ -694,7 +698,8 @@ const seed = async () => {
       },
     ];
 
-    const unis = await University.create(
+    const unis = await createEach(
+      University,
       uniData.map((u) => ({ ...u, seo: u.seo || makeSeoFromEntity({ type: 'university', name: u.name, country: u.country }) })),
     );
 
@@ -708,7 +713,7 @@ const seed = async () => {
         duration: '1-2 years',
         degreeLevel: 'master',
         countries: ['Australia', 'Canada', 'UK', 'USA'],
-        universities: [unis[0]._id, unis[1]._id, unis[2]._id],
+        universities: [unis[0].id, unis[1].id, unis[2].id],
         tuitionRange: 'AUD 35,000 - CAD 60,000 per year',
         intake: 'February, July, September',
         requirements: 'Bachelor\'s degree, GMAT/GRE (some), IELTS 6.5+, work experience preferred',
@@ -722,7 +727,7 @@ const seed = async () => {
         duration: '1-2 years',
         degreeLevel: 'master',
         countries: ['Canada', 'USA', 'Germany', 'Australia'],
-        universities: [unis[1]._id, unis[3]._id, unis[9]._id],
+        universities: [unis[1].id, unis[3].id, unis[9].id],
         tuitionRange: 'CAD 20,000 - USD 55,000 per year',
         intake: 'September, January',
         requirements: 'Bachelor\'s in CS or related field, GRE (some), IELTS 6.5+',
@@ -736,7 +741,7 @@ const seed = async () => {
         duration: '3-4 years',
         degreeLevel: 'bachelor',
         countries: ['Australia', 'New Zealand', 'Canada'],
-        universities: [unis[0]._id, unis[7]._id, unis[6]._id],
+        universities: [unis[0].id, unis[7].id, unis[6].id],
         tuitionRange: 'AUD 30,000 - CAD 40,000 per year',
         intake: 'February, July, September',
         requirements: 'High school completion, IELTS 6.0+',
@@ -750,7 +755,7 @@ const seed = async () => {
         duration: '2 years',
         degreeLevel: 'master',
         countries: ['Australia', 'Germany', 'Canada', 'UK'],
-        universities: [unis[0]._id, unis[9]._id, unis[6]._id],
+        universities: [unis[0].id, unis[9].id, unis[6].id],
         tuitionRange: '€0 - AUD 42,000 per year',
         intake: 'February, July, October',
         requirements: 'Bachelor\'s in Engineering, IELTS 6.5+',
@@ -764,7 +769,7 @@ const seed = async () => {
         duration: '1-2 years',
         degreeLevel: 'master',
         countries: ['Australia', 'Canada', 'UK', 'USA'],
-        universities: [unis[3]._id, unis[0]._id],
+        universities: [unis[3].id, unis[0].id],
         tuitionRange: 'AUD 38,000 - CAD 48,000 per year',
         intake: 'February, September',
         requirements: 'Bachelor\'s degree, programming knowledge, IELTS 6.5+',
@@ -778,7 +783,7 @@ const seed = async () => {
         duration: '3-4 years',
         degreeLevel: 'bachelor',
         countries: ['Australia', 'Canada', 'UK', 'USA'],
-        universities: [unis[2]._id, unis[1]._id],
+        universities: [unis[2].id, unis[1].id],
         tuitionRange: 'AUD 30,000 - CAD 48,000 per year',
         intake: 'February, July, September',
         requirements: 'High school completion, IELTS 6.0+',
@@ -792,7 +797,7 @@ const seed = async () => {
         duration: '2 years',
         degreeLevel: 'master',
         countries: ['Australia', 'New Zealand', 'UK'],
-        universities: [unis[0]._id, unis[4]._id],
+        universities: [unis[0].id, unis[4].id],
         tuitionRange: 'AUD 35,000 - GBP 25,000 per year',
         intake: 'February, July',
         requirements: 'Bachelor\'s degree, IELTS 6.5+',
@@ -806,7 +811,7 @@ const seed = async () => {
         duration: '3-4 years',
         degreeLevel: 'phd',
         countries: ['USA', 'UK', 'Germany', 'Canada'],
-        universities: [unis[1]._id, unis[9]._id],
+        universities: [unis[1].id, unis[9].id],
         tuitionRange: 'Funded/€0 - USD 40,000 per year',
         intake: 'September, January',
         requirements: 'Master\'s degree, research proposal, IELTS 7.0+',
@@ -815,9 +820,17 @@ const seed = async () => {
       },
     ];
 
-    const courses = await Course.create(
+    const courses = await createEach(
+      Course,
       courseData.map((c) => ({ ...c, seo: c.seo || makeSeoFromEntity({ type: 'course', name: c.name, country: c.countries?.[0] }) })),
     );
+
+    // `universities` is a belongsToMany alias, not a column, so it is dropped
+    // by create() — link the junction rows explicitly, as the old embedded
+    // array did.
+    for (let i = 0; i < courses.length; i += 1) {
+      await courses[i].setUniversities(courseData[i].universities);
+    }
 
     console.log(`${courses.length} courses created`);
 
@@ -902,13 +915,14 @@ const seed = async () => {
       },
     ];
 
-    const scholarships = await Scholarship.create(
+    const scholarships = await createEach(
+      Scholarship,
       scholarshipData.map((s) => ({ ...s, seo: s.seo || makeSeoFromEntity({ type: 'scholarship', name: s.name, country: s.country }) })),
     );
 
     console.log(`${scholarships.length} scholarships created`);
 
-    const team = await TeamMember.insertMany([
+    const team = await TeamMember.bulkCreate([
       {
         name: 'Rajesh Sharma',
         position: 'Managing Director',
@@ -978,11 +992,11 @@ const seed = async () => {
         },
         order: 5,
       },
-    ]);
+    ], { individualHooks: true });
 
     console.log(`${team.length} team members created`);
 
-    const faqs = await FAQ.insertMany([
+    const faqs = await FAQ.bulkCreate([
       {
         question: 'How do I start the process of studying abroad?',
         answer: 'Start by visiting our office or filling out the inquiry form on our website. Our counselors will assess your profile, discuss your goals, and guide you through university selection, application, and visa processes.',
@@ -1031,7 +1045,7 @@ const seed = async () => {
         category: 'general',
         order: 8,
       },
-    ]);
+    ], { individualHooks: true });
 
     console.log(`${faqs.length} FAQs created`);
 
@@ -1218,7 +1232,8 @@ const seed = async () => {
       },
     ];
 
-    const services = await Service.create(
+    const services = await createEach(
+      Service,
       serviceData.map((s) => ({ ...s, seo: s.seo || makeSeoFromEntity({ type: 'service', name: s.title }) })),
     );
 
@@ -1280,13 +1295,14 @@ const seed = async () => {
     // default compiled into the frontend", so day-one output is byte-identical
     // to before, and the copy is not duplicated here where it would drift out
     // of sync with the JSX. These rows exist so the admin has something to edit.
-    const pageSeo = await PageSeo.insertMany(
-      PAGES.map((page) => ({ key: page.key, label: page.label, path: page.path, seo: {} }))
+    const pageSeo = await PageSeo.bulkCreate(
+      PAGES.map((page) => ({ key: page.key, label: page.label, path: page.path, seo: {} })),
+      { individualHooks: true }
     );
 
     console.log(`${pageSeo.length} page SEO rows created`);
 
-    const testimonials = await Testimonial.insertMany([
+    const testimonials = await Testimonial.bulkCreate([
       {
         studentName: 'Aarav Sharma',
         country: 'Australia',
@@ -1314,11 +1330,11 @@ const seed = async () => {
         rating: 5,
         isFeatured: true,
       },
-    ]);
+    ], { individualHooks: true });
 
     console.log(`${testimonials.length} testimonials created`);
 
-    const stories = await SuccessStory.insertMany([
+    const stories = await SuccessStory.bulkCreate([
       {
         studentName: 'Prativa Gurung',
         country: 'Australia',
@@ -1346,7 +1362,7 @@ const seed = async () => {
         testimonial: 'Studying in Germany was my dream because of zero tuition fees. Eduvia guided me through the uni-assist process, blocked account setup, and visa application. I am now pursuing my Master\'s at RWTH Aachen with no tuition burden.',
         isFeatured: true,
       },
-    ]);
+    ], { individualHooks: true });
 
     console.log(`${stories.length} success stories created`);
 
@@ -1462,7 +1478,7 @@ Both countries offer generous post-study work rights.</p>
       },
     ];
 
-    const blogs = await Blog.create(blogData);
+    const blogs = await createEach(Blog, blogData);
 
     console.log(`${blogs.length} blog posts created`);
 
@@ -1470,6 +1486,7 @@ Both countries offer generous post-study work rights.</p>
     console.log('Admin login: admin@eduvia.com / admin123');
     console.log(`Created: ${destinations.length} destinations, ${unis.length} universities, ${courses.length} courses, ${scholarships.length} scholarships, ${team.length} team members, ${faqs.length} FAQs, ${services.length} services, ${testimonials.length} testimonials, ${stories.length} success stories, ${blogs.length} blogs`);
 
+    await sequelize.close();
     process.exit(0);
   } catch (error) {
     console.error('Seeding error:', error);

@@ -1,51 +1,82 @@
-import mongoose from 'mongoose';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape } from '../utils/shape.js';
 
-const testimonialSchema = new mongoose.Schema(
+class Testimonial extends Model {}
+
+Testimonial.init(
   {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     studentName: {
-      type: String,
-      required: [true, 'Student name is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('studentName', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Student name is required' } },
     },
     country: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('country', typeof v === 'string' ? v.trim() : v);
+      },
     },
     university: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('university', typeof v === 'string' ? v.trim() : v);
+      },
     },
     course: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('course', typeof v === 'string' ? v.trim() : v);
+      },
     },
     quote: {
-      type: String,
-      required: [true, 'Quote is required'],
+      type: DataTypes.TEXT,
+      allowNull: false,
+      validate: { notNull: { msg: 'Quote is required' } },
     },
     rating: {
-      type: Number,
-      min: [1, 'Rating must be at least 1'],
-      max: [5, 'Rating cannot exceed 5'],
-      default: 5,
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 5,
+      validate: {
+        min: { args: [1], msg: 'Rating must be at least 1' },
+        max: { args: [5], msg: 'Rating cannot exceed 5' },
+      },
     },
     image: {
-      type: String,
-      default: '',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: '',
     },
     isFeatured: {
-      type: Boolean,
-      default: false,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
     isActive: {
-      type: Boolean,
-      default: true,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
     },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'Testimonial',
+    tableName: 'testimonials',
+    timestamps: true,
+    underscored: true,
+    indexes: [{ fields: ['is_featured'] }],
+  }
 );
 
-testimonialSchema.index({ isFeatured: 1 });
+applyApiShape(Testimonial);
 
-const Testimonial = mongoose.model('Testimonial', testimonialSchema);
 export default Testimonial;

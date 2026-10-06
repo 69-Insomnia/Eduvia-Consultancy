@@ -16,7 +16,7 @@ A modern, production-ready education consultancy website for Nepali students who
 
 **Backend:**
 - Node.js + Express.js
-- MongoDB + Mongoose
+- PostgreSQL (Supabase) + Sequelize
 - JWT Authentication
 - Cloudinary (image uploads)
 - Helmet (security)
@@ -27,7 +27,7 @@ A modern, production-ready education consultancy website for Nepali students who
 ### Prerequisites
 
 - Node.js 18+
-- MongoDB (local or Atlas)
+- A Supabase project (PostgreSQL)
 - npm or yarn
 
 ### Installation
@@ -77,7 +77,7 @@ cp .env.example .env
 ```
 
 Required variables:
-- `MONGODB_URI` — MongoDB connection string
+- `SUPABASE_DB_URL` — Supabase Postgres connection string (Project Settings → Database → Connection string → URI)
 - `JWT_SECRET` — Secret key for JWT tokens
 - `CORS_ORIGIN` — Frontend URL (http://localhost:5173)
 
@@ -149,7 +149,7 @@ eduvia-consultancy/
 │   │   ├── config/         # Database config
 │   │   ├── controllers/    # Route handlers
 │   │   ├── middleware/      # Auth, error handling
-│   │   ├── models/         # Mongoose schemas
+│   │   ├── models/         # Sequelize models
 │   │   ├── routes/         # API routes
 │   │   ├── seeds/          # Database seeder
 │   │   ├── services/       # Business logic
@@ -255,12 +255,13 @@ npm run build
 4. Set start command: `npm start`
 5. Add environment variables
 
-### Database (MongoDB Atlas)
-1. Create cluster at mongodb.com
-2. Create database user
-3. Whitelist IP addresses
-4. Get connection string
-5. Set `MONGODB_URI` env var
+### Database (Supabase)
+1. Create a project at supabase.com
+2. Copy the Postgres URI (Project Settings → Database → Connection string) into `SUPABASE_DB_URL`
+3. Apply the schema: `node backend/scripts/migrate.js` (also writes `supabase/migrations/*_init_schema.sql`)
+4. Seed sample data: `npm run seed`
+5. Optional, for managing migrations with the Supabase CLI:
+   `supabase login`, `supabase link --project-ref <project-ref>`, `supabase db push`
 
 ## Features
 

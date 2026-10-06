@@ -1,55 +1,91 @@
-import mongoose from 'mongoose';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape, applySeoDefaults } from '../utils/shape.js';
 import generateUniqueSlug from '../utils/slugify.js';
-import seoFields from './schemas/seoFields.js';
 
-const serviceSchema = new mongoose.Schema(
+class Service extends Model {}
+
+Service.init(
   {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     title: {
-      type: String,
-      required: [true, 'Service title is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('title', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Service title is required' } },
     },
     slug: {
-      type: String,
+      type: DataTypes.STRING,
       unique: true,
     },
     icon: {
-      type: String,
-      default: '',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: '',
     },
     description: {
-      type: String,
-      default: '',
+      type: DataTypes.TEXT,
+      allowNull: false,
+      defaultValue: '',
     },
-    features: [{ type: String }],
+    features: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
     detailedContent: {
-      type: String,
+      type: DataTypes.TEXT,
     },
     image: {
-      type: String,
-      default: '',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: '',
     },
     order: {
-      type: Number,
-      default: 0,
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
     },
     isActive: {
-      type: Boolean,
-      default: true,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
     },
-    seo: seoFields(),
+    seo: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => ({}),
+    },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'Service',
+    tableName: 'services',
+    timestamps: true,
+    underscored: true,
+    indexes: [{ fields: ['order'] }],
+  }
 );
 
-serviceSchema.pre('save', async function (next) {
-  if (this.isModified('title')) {
-    this.slug = await generateUniqueSlug(this.title, mongoose.model('Service'), this._id);
+Service.beforeCreate(async (instance) => {
+  instance.seo = applySeoDefaults(instance.seo);
+  if (instance.title) {
+    instance.slug = await generateUniqueSlug(instance.title, Service, instance.id);
   }
-  next();
 });
 
-serviceSchema.index({ order: 1 });
+Service.beforeUpdate(async (instance) => {
+  if (instance.changed('title') && instance.title) {
+    instance.slug = await generateUniqueSlug(instance.title, Service, instance.id);
+  }
+});
 
-const Service = mongoose.model('Service', serviceSchema);
+applyApiShape(Service);
+
 export default Service;

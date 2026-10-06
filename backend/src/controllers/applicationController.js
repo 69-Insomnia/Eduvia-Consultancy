@@ -1,6 +1,31 @@
+import { Op } from 'sequelize';
 import Application from '../models/Application.js';
+import Student from '../models/Student.js';
+import University from '../models/University.js';
 import asyncHandler from '../middleware/asyncHandler.js';
 import paginate from '../utils/pagination.js';
+import { iLike } from '../utils/search.js';
+import { cleanBody, takeRef } from '../utils/shape.js';
+
+const STUDENT_LIST = ['id', 'firstName', 'lastName', 'email', 'phone'];
+const STUDENT_EDIT = ['id', 'firstName', 'lastName', 'email'];
+const UNIVERSITY_LIST = ['id', 'name', 'country', 'city'];
+const UNIVERSITY_EDIT = ['id', 'name', 'country'];
+
+// Mongoose cast body relations (raw id, populated doc or `''`) to an ObjectId; unwrap them to the id here.
+const refId = (v) => (v && typeof v === 'object' ? v._id ?? v.id ?? null : v === '' ? null : v);
+
+const applicationBody = (body) => {
+  const data = takeRef(takeRef(cleanBody(body), 'student'), 'university');
+  if (data.studentId !== undefined) data.studentId = refId(data.studentId);
+  if (data.universityId !== undefined) data.universityId = refId(data.universityId);
+  return data;
+};
+
+const refsInclude = (studentAttributes, universityAttributes) => [
+  { model: Student, as: 'student', attributes: studentAttributes },
+  { model: University, as: 'university', attributes: universityAttributes },
+];
 
 export const createApplication = asyncHandler(async (req, res) => {
   const { student, university, course, intake, year } = req.body;
@@ -10,8 +35,8 @@ export const createApplication = asyncHandler(async (req, res) => {
       .json({ success: false, message: 'Student, university, course, intake, and year are required' });
   }
 
-  const application = await Application.create(req.body);
-  await application.populate(['student', 'university']);
+  let application = await Application.create(applicationBody(req.body));
+  application = await Application.findByPk(application.id, { include: refsInclude() });
   res.status(201).json({ success: true, application });
 });
 
@@ -20,28 +45,30 @@ export const getApplications = asyncHandler(async (req, res) => {
 
   const filter = {};
   if (status) filter.status = status;
-  if (student) filter.student = student;
-  if (university) filter.university = university;
+  if (student) filter.studentId = student;
+  if (university) filter.universityId = university;
   if (search) {
-    filter.$or = [{ course: { $regex: search, $options: 'i' } }, { notes: { $regex: search, $options: 'i' } }];
+    filter[Op.or] = [
+      { course: iLike(search) },
+      { notes: iLike(search) },
+    ];
   }
 
   const { skip, setTotal } = paginate(page, limit);
-  const total = await Application.countDocuments(filter);
-  const applications = await Application.find(filter)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(setTotal(total).limit)
-    .populate('student', 'firstName lastName email phone')
-    .populate('university', 'name country city');
+  const total = await Application.count({ where: filter });
+  const applications = await Application.findAll({
+    where: filter,
+    order: [['createdAt', 'DESC']],
+    offset: skip,
+    limit: setTotal(total).limit,
+    include: refsInclude(STUDENT_LIST, UNIVERSITY_LIST),
+  });
 
   res.json({ success: true, applications, pagination: setTotal(total) });
 });
 
 export const getApplication = asyncHandler(async (req, res) => {
-  const application = await Application.findById(req.params.id)
-    .populate('student')
-    .populate('university');
+  const application = await Application.findByPk(req.params.id, { include: refsInclude() });
   if (!application) {
     return res.status(404).json({ success: false, message: 'Application not found' });
   }
@@ -49,24 +76,24 @@ export const getApplication = asyncHandler(async (req, res) => {
 });
 
 export const updateApplication = asyncHandler(async (req, res) => {
-  const application = await Application.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  })
-    .populate('student', 'firstName lastName email')
-    .populate('university', 'name country');
-
+  const application = await Application.findByPk(req.params.id);
   if (!application) {
     return res.status(404).json({ success: false, message: 'Application not found' });
   }
-  res.json({ success: true, application });
+  application.set(applicationBody(req.body));
+  await application.save();
+  const reloaded = await Application.findByPk(application.id, {
+    include: refsInclude(STUDENT_EDIT, UNIVERSITY_EDIT),
+  });
+  res.json({ success: true, application: reloaded });
 });
 
 export const deleteApplication = asyncHandler(async (req, res) => {
-  const application = await Application.findByIdAndDelete(req.params.id);
+  const application = await Application.findByPk(req.params.id);
   if (!application) {
     return res.status(404).json({ success: false, message: 'Application not found' });
   }
+  await application.destroy();
   res.json({ success: true, message: 'Application deleted successfully' });
 });
 
@@ -81,16 +108,14 @@ export const updateApplicationStatus = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid status' });
   }
 
-  const application = await Application.findByIdAndUpdate(
-    req.params.id,
-    { status },
-    { new: true, runValidators: true }
-  )
-    .populate('student', 'firstName lastName email')
-    .populate('university', 'name country');
-
+  const application = await Application.findByPk(req.params.id);
   if (!application) {
     return res.status(404).json({ success: false, message: 'Application not found' });
   }
-  res.json({ success: true, application });
+  application.status = status;
+  await application.save();
+  const reloaded = await Application.findByPk(application.id, {
+    include: refsInclude(STUDENT_EDIT, UNIVERSITY_EDIT),
+  });
+  res.json({ success: true, application: reloaded });
 });

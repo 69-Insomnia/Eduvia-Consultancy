@@ -1,75 +1,120 @@
-import mongoose from 'mongoose';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape, applySeoDefaults } from '../utils/shape.js';
 import generateUniqueSlug from '../utils/slugify.js';
-import seoFields from './schemas/seoFields.js';
+import University from './University.js';
 
-const scholarshipSchema = new mongoose.Schema(
+const TYPE_VALUES = ['merit', 'need', 'government', 'university'];
+
+class Scholarship extends Model {}
+
+Scholarship.init(
   {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     name: {
-      type: String,
-      required: [true, 'Scholarship name is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('name', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Scholarship name is required' } },
     },
     slug: {
-      type: String,
+      type: DataTypes.STRING,
       unique: true,
     },
-    university: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'University',
+    universityId: {
+      type: DataTypes.UUID,
     },
     country: {
-      type: String,
-      required: [true, 'Country is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('country', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Country is required' } },
     },
     description: {
-      type: String,
-      default: '',
+      type: DataTypes.TEXT,
+      allowNull: false,
+      defaultValue: '',
     },
     eligibility: {
-      type: String,
+      type: DataTypes.TEXT,
     },
     amount: {
-      type: String,
+      type: DataTypes.STRING,
     },
     type: {
-      type: String,
-      enum: ['merit', 'need', 'government', 'university'],
-      default: 'merit',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'merit',
+      validate: { isIn: { args: [TYPE_VALUES] } },
     },
     deadline: {
-      type: Date,
+      type: DataTypes.DATE,
     },
     applicationProcess: {
-      type: String,
+      type: DataTypes.TEXT,
     },
-    requirements: [{ type: String }],
+    requirements: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
     link: {
-      type: String,
+      type: DataTypes.STRING,
     },
     isFeatured: {
-      type: Boolean,
-      default: false,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
     isActive: {
-      type: Boolean,
-      default: true,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
     },
-    seo: seoFields(),
+    seo: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => ({}),
+    },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'Scholarship',
+    tableName: 'scholarships',
+    timestamps: true,
+    underscored: true,
+    indexes: [{ fields: ['country'] }, { fields: ['type'] }, { fields: ['is_featured'] }],
+  }
 );
 
-scholarshipSchema.pre('save', async function (next) {
-  if (this.isModified('name')) {
-    this.slug = await generateUniqueSlug(this.name, mongoose.model('Scholarship'), this._id);
-  }
-  next();
+Scholarship.belongsTo(University, {
+  foreignKey: { name: 'universityId', field: 'university_id' },
+  as: 'university',
+  onDelete: 'SET NULL',
+  onUpdate: 'CASCADE',
 });
 
-scholarshipSchema.index({ country: 1 });
-scholarshipSchema.index({ type: 1 });
-scholarshipSchema.index({ isFeatured: 1 });
+Scholarship.beforeCreate(async (instance) => {
+  instance.seo = applySeoDefaults(instance.seo);
+  if (instance.name) {
+    instance.slug = await generateUniqueSlug(instance.name, Scholarship, instance.id);
+  }
+});
 
-const Scholarship = mongoose.model('Scholarship', scholarshipSchema);
+Scholarship.beforeUpdate(async (instance) => {
+  if (instance.changed('name') && instance.name) {
+    instance.slug = await generateUniqueSlug(instance.name, Scholarship, instance.id);
+  }
+});
+
+applyApiShape(Scholarship, { universityId: 'university' });
+
 export default Scholarship;

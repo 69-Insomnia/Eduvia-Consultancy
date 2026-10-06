@@ -1,109 +1,149 @@
-import mongoose from 'mongoose';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape, applySeoDefaults } from '../utils/shape.js';
 import generateUniqueSlug from '../utils/slugify.js';
-import seoFields from './schemas/seoFields.js';
+import Blog from './Blog.js';
 
-const faqItemSchema = new mongoose.Schema({
-  question: { type: String, required: true },
-  answer: { type: String, required: true },
-});
+class Destination extends Model {}
 
-const destinationSchema = new mongoose.Schema(
+Destination.init(
   {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     name: {
-      type: String,
-      required: [true, 'Destination name is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
       unique: true,
+      set(v) {
+        this.setDataValue('name', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Destination name is required' } },
     },
     slug: {
-      type: String,
+      type: DataTypes.STRING,
       unique: true,
     },
     code: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('code', typeof v === 'string' ? v.trim() : v);
+      },
     },
     flag: {
-      type: String,
+      type: DataTypes.STRING,
     },
     description: {
-      type: String,
-      default: '',
+      type: DataTypes.TEXT,
+      allowNull: false,
+      defaultValue: '',
     },
     shortDescription: {
-      type: String,
-      maxlength: [300, 'Short description cannot exceed 300 characters'],
+      type: DataTypes.STRING(300),
+      validate: { len: { args: [0, 300], msg: 'Short description cannot exceed 300 characters' } },
     },
     image: {
-      type: String,
-      default: '',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: '',
     },
     coverImage: {
-      type: String,
-      default: '',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: '',
     },
-    whyStudyHere: [{ type: String }],
-    popularUniversities: [
-      {
-        name: { type: String },
-        ranking: { type: String },
-        programs: [{ type: String }],
-      },
-    ],
-    popularCourses: [{ type: String }],
+    whyStudyHere: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
+    popularUniversities: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
+    popularCourses: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
     tuitionInfo: {
-      type: String,
+      type: DataTypes.TEXT,
     },
     costOfLiving: {
-      type: String,
+      type: DataTypes.TEXT,
     },
     scholarships: {
-      type: String,
+      type: DataTypes.TEXT,
     },
     englishRequirements: {
-      type: String,
+      type: DataTypes.TEXT,
     },
     visaInfo: {
-      type: String,
+      type: DataTypes.TEXT,
     },
     workOpportunities: {
-      type: String,
+      type: DataTypes.TEXT,
     },
     intakes: {
-      type: String,
+      type: DataTypes.TEXT,
     },
     applicationProcess: {
-      type: String,
+      type: DataTypes.TEXT,
     },
-    faqs: [faqItemSchema],
-    relatedBlogs: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Blog',
-      },
-    ],
-    seo: seoFields(),
+    faqs: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
+    seo: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => ({}),
+    },
     isFeatured: {
-      type: Boolean,
-      default: false,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
     isActive: {
-      type: Boolean,
-      default: true,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
     },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'Destination',
+    tableName: 'destinations',
+    timestamps: true,
+    underscored: true,
+    indexes: [{ fields: ['is_featured'] }, { fields: ['slug'] }, { fields: ['created_at'] }],
+  }
 );
 
-destinationSchema.pre('save', async function (next) {
-  if (this.isModified('name')) {
-    this.slug = await generateUniqueSlug(this.name, mongoose.model('Destination'), this._id);
-  }
-  next();
+Destination.belongsToMany(Blog, {
+  through: 'destination_related_blogs',
+  as: 'relatedBlogs',
+  foreignKey: 'destinationId',
+  otherKey: 'blogId',
 });
 
-destinationSchema.index({ isFeatured: 1 });
-destinationSchema.index({ name: 'text', description: 'text' });
+Destination.beforeCreate(async (instance) => {
+  instance.seo = applySeoDefaults(instance.seo);
+  if (instance.name) {
+    instance.slug = await generateUniqueSlug(instance.name, Destination, instance.id);
+  }
+});
 
-const Destination = mongoose.model('Destination', destinationSchema);
+Destination.beforeUpdate(async (instance) => {
+  if (instance.changed('name') && instance.name) {
+    instance.slug = await generateUniqueSlug(instance.name, Destination, instance.id);
+  }
+});
+
+applyApiShape(Destination);
+
 export default Destination;

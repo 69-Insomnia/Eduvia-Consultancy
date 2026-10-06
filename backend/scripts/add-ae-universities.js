@@ -1,7 +1,7 @@
 /**
  * Additive import of nine UAE branch campuses and their listed degrees.
  *
- * Same contract as the other batch scripts: never calls deleteMany(), inserts
+ * Same contract as the other batch scripts: never deletes existing rows, inserts
  * only what is missing, leaves other collections alone. Safe to re-run.
  *
  *   npm run seed:ae
@@ -48,7 +48,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import mongoose from 'mongoose';
+import connectDB, { sequelize } from '../src/config/db.js';
 import University from '../src/models/University.js';
 import Course from '../src/models/Course.js';
 import { makeSeoFromEntity } from '../src/utils/seoDefaults.js';
@@ -351,8 +351,8 @@ const tuitionRangeFor = (fees) => {
 
 const run = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB connected.');
+    await connectDB();
+    console.log('PostgreSQL connected.');
 
     let unisAdded = 0;
     let unisExisting = 0;
@@ -362,7 +362,7 @@ const run = async () => {
     for (const [key, institution] of Object.entries(INSTITUTIONS)) {
       const rows = COURSES[key];
       const fees = rows.map((row) => row.fee);
-      let university = await University.findOne({ name: institution.name });
+      let university = await University.findOne({ where: { name: institution.name } });
 
       if (university) {
         unisExisting++;
@@ -371,7 +371,7 @@ const run = async () => {
         const features = ['Free to apply'];
         if (institution.scholarship) features.push('Scholarship available');
 
-        university = new University({
+        university = await University.create({
           seo: makeSeoFromEntity({ type: 'university', name: institution.name, country: AE }),
           name: institution.name,
           country: AE,
@@ -393,26 +393,28 @@ const run = async () => {
           isFeatured: false,
           isActive: true,
         });
-        // save() rather than findOneAndUpdate so the pre-save hook assigns a slug.
-        await university.save();
+        // create() rather than an update so the beforeCreate hook assigns a slug.
         unisAdded++;
         console.log(`  + institution added: ${institution.name} (${rows.length} degrees)`);
       }
 
       for (const row of rows) {
-        const found = await Course.findOne({ name: row.name, universities: university._id });
+        const found = await Course.findOne({
+          where: { name: row.name },
+          include: [{ model: University, as: 'universities', where: { id: university.id }, attributes: [], required: true }],
+        });
         if (found) {
           coursesExisting++;
           continue;
         }
 
-        await new Course({
+        const { universities, ...courseData } = {
           seo: makeSeoFromEntity({ type: 'course', name: row.name, country: AE }),
           name: row.name,
           category: row.category,
           degreeLevel: LEVEL_TO_ENUM[row.level],
           countries: [AE],
-          universities: [university._id],
+          universities: [university.id],
           tuitionRange: feeLabel(row.fee),
           // Every row in this batch was AED 0.00 with a "Free to apply" badge.
           applicationFee: 'AED 0.00',
@@ -422,15 +424,17 @@ const run = async () => {
           intake: institution.intake,
           isFeatured: false,
           isActive: true,
-        }).save();
+        };
+        const course = await Course.create(courseData);
+        await course.setUniversities(universities);
 
         coursesAdded++;
       }
     }
 
     const [uniTotal, courseTotal] = await Promise.all([
-      University.countDocuments(),
-      Course.countDocuments(),
+      University.count(),
+      Course.count(),
     ]);
 
     console.log('\nSummary');
@@ -445,11 +449,11 @@ const run = async () => {
     }
     console.log(`  total in this batch: ${total}`);
 
-    await mongoose.disconnect();
+    await sequelize.close();
     console.log('Done.');
   } catch (error) {
     console.error('Import failed:', error.message);
-    await mongoose.disconnect().catch(() => {});
+    await sequelize.close().catch(() => {});
     process.exitCode = 1;
   }
 };

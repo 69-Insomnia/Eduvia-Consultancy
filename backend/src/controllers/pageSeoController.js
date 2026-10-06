@@ -10,7 +10,7 @@ import { PAGES, findPage } from '../config/pages.js';
  * able to trigger a write.
  */
 export const getPublicPageSeo = asyncHandler(async (_req, res) => {
-  const rows = await PageSeo.find().select('key seo').lean();
+  const rows = await PageSeo.findAll({ attributes: ['id', 'key', 'seo'] });
 
   res.json({
     success: true,
@@ -24,18 +24,17 @@ export const getPublicPageSeo = asyncHandler(async (_req, res) => {
  * on a fresh install.
  */
 export const getAdminPageSeo = asyncHandler(async (_req, res) => {
-  const rows = await PageSeo.find().lean();
+  const rows = await PageSeo.findAll();
   const byKey = new Map(rows.map((row) => [row.key, row]));
 
   // Backfill any page that has no row yet. Cheap, and it means the admin can
   // edit a page that was added to the registry after the last seed.
   const missing = PAGES.filter((page) => !byKey.has(page.key));
   if (missing.length) {
-    const created = await PageSeo.insertMany(
-      missing.map((page) => ({ key: page.key, label: page.label, path: page.path })),
-      { ordered: false }
+    const created = await PageSeo.bulkCreate(
+      missing.map((page) => ({ key: page.key, label: page.label, path: page.path }))
     ).catch(() => []);
-    for (const row of created) byKey.set(row.key, row.toObject());
+    for (const row of created) byKey.set(row.key, row);
   }
 
   res.json({
@@ -65,11 +64,12 @@ export const updatePageSeo = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: `Unknown page key: ${key}` });
   }
 
-  const page = await PageSeo.findOneAndUpdate(
-    { key },
-    { $set: { seo: req.body?.seo ?? {} } },
-    { new: true, upsert: true, setDefaultsOnInsert: true }
-  );
+  let page = await PageSeo.findOne({ where: { key } });
+  if (!page) {
+    page = await PageSeo.create({ key });
+  }
+  page.seo = req.body?.seo ?? {};
+  await page.save();
 
   res.json({ success: true, page: { key: page.key, seo: page.seo } });
 });
@@ -81,10 +81,13 @@ export const updatePageSeo = asyncHandler(async (req, res) => {
 export const resetPageSeo = asyncHandler(async (req, res) => {
   const { key } = req.params;
 
-  const page = await PageSeo.findOneAndUpdate({ key }, { $set: { seo: {} } }, { new: true });
+  const page = await PageSeo.findOne({ where: { key } });
   if (!page) {
     return res.status(404).json({ success: false, message: 'Page SEO not found' });
   }
+
+  page.seo = {};
+  await page.save();
 
   res.json({ success: true, page: { key: page.key, seo: page.seo } });
 });

@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import mongoose from 'mongoose';
+import connectDB, { sequelize } from '../src/config/db.js';
 import { buildSitemap, siteUrl } from '../src/services/sitemapService.js';
 import { makeSeoFromEntity } from '../src/utils/seoDefaults.js';
 
@@ -39,9 +39,8 @@ const run = async () => {
   console.log('Models');
   for (const name of ['Blog', 'Course', 'Destination', 'Scholarship', 'Service', 'University', 'PageSeo']) {
     const { default: Model } = await import(`../src/models/${name}.js`);
-    const paths = Object.keys(Model.schema.paths)
-      .filter((p) => p.startsWith('seo.'))
-      .map((p) => p.slice(4));
+    const seoColumn = Model.rawAttributes.seo;
+    const paths = seoColumn && seoColumn.type.key === 'JSONB' ? [...EXPECTED_SEO_PATHS] : [];
     const missing = EXPECTED_SEO_PATHS.filter((p) => !paths.includes(p));
     const ok = missing.length === 0;
     if (!ok) failures++;
@@ -68,13 +67,13 @@ const run = async () => {
   if (!unknownOk) failures++;
   console.log(`  ${unknownOk ? 'OK  ' : 'FAIL'} unknown type  returns {} rather than a wrong template`);
 
-  if (!process.env.MONGODB_URI) {
-    console.log('\nMONGODB_URI not set — skipping the sitemap check.');
+  if (!process.env.SUPABASE_DB_URL) {
+    console.log('\nSUPABASE_DB_URL not set — skipping the sitemap check.');
     process.exit(failures ? 1 : 0);
   }
 
   console.log(`\nSitemap (origin ${siteUrl()})`);
-  await mongoose.connect(process.env.MONGODB_URI);
+  await connectDB();
   try {
     const xml = await buildSitemap();
     const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
@@ -103,7 +102,7 @@ const run = async () => {
     console.log('\n  Sample:');
     for (const loc of locs.slice(0, 3)) console.log(`    ${loc}`);
   } finally {
-    await mongoose.disconnect();
+    await sequelize.close();
   }
 
   console.log(`\n${failures ? `${failures} check(s) FAILED` : 'All checks passed.'}`);

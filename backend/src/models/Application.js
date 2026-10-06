@@ -1,71 +1,107 @@
-import mongoose from 'mongoose';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape } from '../utils/shape.js';
+import Student from './Student.js';
+import University from './University.js';
 
-const applicationSchema = new mongoose.Schema(
+const STATUS_VALUES = [
+  'draft',
+  'submitted',
+  'underReview',
+  'conditionalOffer',
+  'fullOffer',
+  'rejected',
+  'visaApplied',
+  'visaApproved',
+  'visaRejected',
+  'enrolled',
+  'deferred',
+];
+
+class Application extends Model {}
+
+Application.init(
   {
-    student: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Student',
-      required: [true, 'Student is required'],
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
     },
-    university: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'University',
-      required: [true, 'University is required'],
+    studentId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      validate: { notNull: { msg: 'Student is required' } },
+    },
+    universityId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      validate: { notNull: { msg: 'University is required' } },
     },
     course: {
-      type: String,
-      required: [true, 'Course is required'],
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: { notNull: { msg: 'Course is required' } },
     },
     intake: {
-      type: String,
-      required: [true, 'Intake is required'],
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: { notNull: { msg: 'Intake is required' } },
     },
     year: {
-      type: Number,
-      required: [true, 'Year is required'],
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      validate: { notNull: { msg: 'Year is required' } },
     },
     status: {
-      type: String,
-      enum: [
-        'draft',
-        'submitted',
-        'underReview',
-        'conditionalOffer',
-        'fullOffer',
-        'rejected',
-        'visaApplied',
-        'visaApproved',
-        'visaRejected',
-        'enrolled',
-        'deferred',
-      ],
-      default: 'draft',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'draft',
+      validate: { isIn: { args: [STATUS_VALUES] } },
     },
-    documents: [
-      {
-        name: { type: String },
-        url: { type: String },
-        uploadedAt: { type: Date, default: Date.now },
-      },
-    ],
+    documents: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
     offerLetter: {
-      type: String,
+      type: DataTypes.STRING,
     },
     notes: {
-      type: String,
+      type: DataTypes.TEXT,
     },
     deadlines: {
-      applicationDeadline: { type: Date },
-      documentDeadline: { type: Date },
-      visaDeadline: { type: Date },
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => ({}),
     },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'Application',
+    tableName: 'applications',
+    timestamps: true,
+    underscored: true,
+    indexes: [
+      { fields: ['student_id', 'status'] },
+      { fields: ['university_id'] },
+      { fields: ['created_at'] },
+    ],
+  }
 );
 
-applicationSchema.index({ student: 1, status: 1 });
-applicationSchema.index({ university: 1 });
-applicationSchema.index({ createdAt: -1 });
+Application.belongsTo(Student, {
+  foreignKey: { name: 'studentId', field: 'student_id' },
+  as: 'student',
+  onDelete: 'RESTRICT',
+  onUpdate: 'CASCADE',
+});
+Application.belongsTo(University, {
+  foreignKey: { name: 'universityId', field: 'university_id' },
+  as: 'university',
+  onDelete: 'RESTRICT',
+  onUpdate: 'CASCADE',
+});
 
-const Application = mongoose.model('Application', applicationSchema);
+applyApiShape(Application, { studentId: 'student', universityId: 'university' });
+
 export default Application;

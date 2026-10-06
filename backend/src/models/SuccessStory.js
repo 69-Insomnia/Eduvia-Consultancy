@@ -1,49 +1,79 @@
-import mongoose from 'mongoose';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape } from '../utils/shape.js';
 
-const successStorySchema = new mongoose.Schema(
+class SuccessStory extends Model {}
+
+SuccessStory.init(
   {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     studentName: {
-      type: String,
-      required: [true, 'Student name is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('studentName', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Student name is required' } },
     },
     photo: {
-      type: String,
-      default: '',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: '',
     },
     country: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('country', typeof v === 'string' ? v.trim() : v);
+      },
     },
     university: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('university', typeof v === 'string' ? v.trim() : v);
+      },
     },
     course: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('course', typeof v === 'string' ? v.trim() : v);
+      },
     },
     intake: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('intake', typeof v === 'string' ? v.trim() : v);
+      },
     },
     testimonial: {
-      type: String,
-      required: [true, 'Testimonial is required'],
+      type: DataTypes.TEXT,
+      allowNull: false,
+      validate: { notNull: { msg: 'Testimonial is required' } },
     },
     isFeatured: {
-      type: Boolean,
-      default: false,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
     isActive: {
-      type: Boolean,
-      default: true,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
     },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'SuccessStory',
+    tableName: 'successstories',
+    timestamps: true,
+    underscored: true,
+    indexes: [{ fields: ['is_featured'] }],
+  }
 );
 
-successStorySchema.index({ isFeatured: 1 });
+applyApiShape(SuccessStory);
 
-const SuccessStory = mongoose.model('SuccessStory', successStorySchema);
 export default SuccessStory;

@@ -1,106 +1,148 @@
-import mongoose from 'mongoose';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape, applySeoDefaults } from '../utils/shape.js';
 import generateUniqueSlug from '../utils/slugify.js';
-import seoFields from './schemas/seoFields.js';
 
-const programSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  degree: { type: String },
-  duration: { type: String },
-  tuition: { type: String },
-  intake: { type: String },
-  requirements: { type: String },
-});
+const TYPE_VALUES = ['public', 'private'];
 
-const universitySchema = new mongoose.Schema(
+class University extends Model {}
+
+University.init(
   {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     name: {
-      type: String,
-      required: [true, 'University name is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
       unique: true,
+      set(v) {
+        this.setDataValue('name', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'University name is required' } },
     },
     slug: {
-      type: String,
+      type: DataTypes.STRING,
       unique: true,
     },
     country: {
-      type: String,
-      required: [true, 'Country is required'],
-      trim: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('country', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Country is required' } },
     },
     city: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('city', typeof v === 'string' ? v.trim() : v);
+      },
     },
     logo: {
-      type: String,
-      default: '',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: '',
     },
     coverImage: {
-      type: String,
-      default: '',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: '',
     },
     description: {
-      type: String,
-      default: '',
+      type: DataTypes.TEXT,
+      allowNull: false,
+      defaultValue: '',
     },
     shortDescription: {
-      type: String,
-      maxlength: [300, 'Short description cannot exceed 300 characters'],
+      type: DataTypes.STRING(300),
+      validate: { len: { args: [0, 300], msg: 'Short description cannot exceed 300 characters' } },
     },
     website: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('website', typeof v === 'string' ? v.trim() : v);
+      },
     },
     ranking: {
-      type: String,
+      type: DataTypes.STRING,
     },
     founded: {
-      type: String,
+      type: DataTypes.STRING,
     },
     type: {
-      type: String,
-      enum: ['public', 'private'],
-      default: 'public',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'public',
+      validate: { isIn: { args: [TYPE_VALUES] } },
     },
-    programs: [programSchema],
-    scholarships: [
-      {
-        name: { type: String },
-        amount: { type: String },
-        eligibility: { type: String },
-      },
-    ],
+    programs: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
+    scholarships: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
     entryRequirements: {
-      type: String,
+      type: DataTypes.TEXT,
     },
     tuitionRange: {
-      type: String,
+      type: DataTypes.STRING,
     },
-    features: [{ type: String }],
+    features: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => [],
+    },
     isFeatured: {
-      type: Boolean,
-      default: false,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
     isActive: {
-      type: Boolean,
-      default: true,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
     },
-    seo: seoFields(),
+    seo: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => ({}),
+    },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'University',
+    tableName: 'universities',
+    timestamps: true,
+    underscored: true,
+    indexes: [
+      { fields: ['country'] },
+      { fields: ['is_featured'] },
+      { fields: ['slug'] },
+      { fields: ['created_at'] },
+    ],
+  }
 );
 
-universitySchema.pre('save', async function (next) {
-  if (this.isModified('name')) {
-    this.slug = await generateUniqueSlug(this.name, mongoose.model('University'), this._id);
+University.beforeCreate(async (instance) => {
+  instance.seo = applySeoDefaults(instance.seo);
+  if (instance.name) {
+    instance.slug = await generateUniqueSlug(instance.name, University, instance.id);
   }
-  next();
 });
 
-universitySchema.index({ country: 1 });
-universitySchema.index({ isFeatured: 1 });
-universitySchema.index({ name: 'text', description: 'text' });
+University.beforeUpdate(async (instance) => {
+  if (instance.changed('name') && instance.name) {
+    instance.slug = await generateUniqueSlug(instance.name, University, instance.id);
+  }
+});
 
-const University = mongoose.model('University', universitySchema);
+applyApiShape(University);
+
 export default University;

@@ -48,7 +48,7 @@ export const uploadFile = asyncHandler(async (req, res) => {
     mimetype: req.file.mimetype,
     size: req.file.size,
     folder,
-    uploadedBy: req.admin._id,
+    uploadedById: req.admin.id,
   });
 
   res.status(201).json({ success: true, media });
@@ -61,17 +61,19 @@ export const getMedia = asyncHandler(async (req, res) => {
   if (folder) filter.folder = folder;
 
   const { skip, setTotal } = paginate(page, limit);
-  const total = await Media.countDocuments(filter);
-  const media = await Media.find(filter)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(setTotal(total).limit);
+  const total = await Media.count({ where: filter });
+  const media = await Media.findAll({
+    where: filter,
+    order: [['createdAt', 'DESC NULLS LAST']],
+    offset: skip,
+    limit: setTotal(total).limit,
+  });
 
   res.json({ success: true, media, pagination: setTotal(total) });
 });
 
 export const deleteMedia = asyncHandler(async (req, res) => {
-  const media = await Media.findById(req.params.id);
+  const media = await Media.findByPk(req.params.id);
   if (!media) {
     return res.status(404).json({ success: false, message: 'Media not found' });
   }
@@ -82,6 +84,6 @@ export const deleteMedia = asyncHandler(async (req, res) => {
     console.error('Cloudinary delete error:', err.message);
   }
 
-  await Media.findByIdAndDelete(req.params.id);
+  await media.destroy();
   res.json({ success: true, message: 'Media deleted successfully' });
 });

@@ -1,42 +1,69 @@
-import mongoose from 'mongoose';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape } from '../utils/shape.js';
+import Admin from './Admin.js';
 
-const mediaSchema = new mongoose.Schema(
+class Media extends Model {}
+
+Media.init(
   {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     filename: {
-      type: String,
-      required: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: { notNull: { msg: 'filename is required' } },
     },
     originalName: {
-      type: String,
-      required: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: { notNull: { msg: 'originalName is required' } },
     },
     url: {
-      type: String,
-      required: true,
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: { notNull: { msg: 'url is required' } },
     },
     thumbnailUrl: {
-      type: String,
-      default: '',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: '',
     },
     mimetype: {
-      type: String,
+      type: DataTypes.STRING,
     },
     size: {
-      type: Number,
+      type: DataTypes.INTEGER,
     },
     folder: {
-      type: String,
-      default: 'general',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'general',
     },
-    uploadedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Admin',
+    uploadedById: {
+      type: DataTypes.UUID,
     },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'Media',
+    tableName: 'media',
+    timestamps: true,
+    underscored: true,
+    indexes: [{ fields: ['folder'] }],
+  }
 );
 
-mediaSchema.index({ folder: 1 });
+Media.belongsTo(Admin, {
+  foreignKey: { name: 'uploadedById', field: 'uploaded_by_id' },
+  as: 'uploadedBy',
+  onDelete: 'SET NULL',
+  onUpdate: 'CASCADE',
+});
 
-const Media = mongoose.model('Media', mediaSchema);
+applyApiShape(Media, { uploadedById: 'uploadedBy' });
+
 export default Media;

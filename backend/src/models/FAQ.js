@@ -1,35 +1,58 @@
-import mongoose from 'mongoose';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape } from '../utils/shape.js';
 
-const faqSchema = new mongoose.Schema(
+class FAQ extends Model {}
+
+FAQ.init(
   {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     question: {
-      type: String,
-      required: [true, 'Question is required'],
-      trim: true,
+      type: DataTypes.TEXT,
+      allowNull: false,
+      set(v) {
+        this.setDataValue('question', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Question is required' } },
     },
     answer: {
-      type: String,
-      required: [true, 'Answer is required'],
+      type: DataTypes.TEXT,
+      allowNull: false,
+      validate: { notNull: { msg: 'Answer is required' } },
     },
     category: {
-      type: String,
-      trim: true,
-      default: 'general',
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'general',
+      set(v) {
+        this.setDataValue('category', typeof v === 'string' ? v.trim() : v);
+      },
     },
     order: {
-      type: Number,
-      default: 0,
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
     },
     isActive: {
-      type: Boolean,
-      default: true,
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
     },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'FAQ',
+    tableName: 'faqs',
+    timestamps: true,
+    underscored: true,
+    indexes: [{ fields: ['category'] }, { fields: ['order'] }],
+  }
 );
 
-faqSchema.index({ category: 1 });
-faqSchema.index({ order: 1 });
+applyApiShape(FAQ);
 
-const FAQ = mongoose.model('FAQ', faqSchema);
 export default FAQ;

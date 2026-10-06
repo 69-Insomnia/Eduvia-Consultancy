@@ -1,37 +1,56 @@
-import mongoose from 'mongoose';
-import seoFields from './schemas/seoFields.js';
+﻿import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import { applyApiShape, applySeoDefaults } from '../utils/shape.js';
 
-/**
- * SEO overrides for the site's own pages (About, Contact, Privacy Policy, …).
- *
- * Entity pages get their SEO from their own document (a University carries its
- * own `seo`), but static pages have no document to hang it on — before this
- * model their metadata was hardcoded in JSX and needed a deploy to change.
- *
- * One row per page, keyed by the strings in `src/config/pages.js`. A row that is
- * missing or has no `title` means "use the page's built-in default", which is
- * why nothing here has a default value.
- */
-const pageSeoSchema = new mongoose.Schema(
+class PageSeo extends Model {}
+
+PageSeo.init(
   {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
     key: {
-      type: String,
-      required: [true, 'Page key is required'],
+      type: DataTypes.STRING,
+      allowNull: false,
       unique: true,
-      trim: true,
+      set(v) {
+        this.setDataValue('key', typeof v === 'string' ? v.trim() : v);
+      },
+      validate: { notNull: { msg: 'Page key is required' } },
     },
     label: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('label', typeof v === 'string' ? v.trim() : v);
+      },
     },
     path: {
-      type: String,
-      trim: true,
+      type: DataTypes.STRING,
+      set(v) {
+        this.setDataValue('path', typeof v === 'string' ? v.trim() : v);
+      },
     },
-    seo: seoFields(),
+    seo: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: () => ({}),
+    },
   },
-  { timestamps: true }
+  {
+    sequelize,
+    modelName: 'PageSeo',
+    tableName: 'pageseos',
+    timestamps: true,
+    underscored: true,
+  }
 );
 
-const PageSeo = mongoose.model('PageSeo', pageSeoSchema);
+PageSeo.beforeCreate((instance) => {
+  instance.seo = applySeoDefaults(instance.seo);
+});
+
+applyApiShape(PageSeo);
+
 export default PageSeo;
