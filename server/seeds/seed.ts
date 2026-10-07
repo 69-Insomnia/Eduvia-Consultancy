@@ -29,6 +29,12 @@ const createEach = async (M, items) => {
 
 const seed = async () => {
   try {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'The demo seed is destructive and is disabled in production. Use reviewed migrations and explicit import scripts instead.'
+      );
+    }
+
     await connectDB();
     console.log('PostgreSQL connected for seeding...');
 
@@ -498,8 +504,7 @@ const seed = async () => {
         name: 'University of Melbourne',
         country: 'Australia',
         city: 'Melbourne',
-        logo: '/images/unis/melbourne-logo.png',
-        coverImage: '/images/unis/melbourne-cover.jpg',
+        coverImage: '/universities/university-of-melbourne.jpg',
         shortDescription: 'One of Australia\'s leading research universities, consistently ranked among the top universities globally.',
         description: 'The University of Melbourne is a public research university located in Melbourne, Australia. Founded in 1853, it is the second oldest university in Australia and the oldest in Victoria. The university is consistently ranked among the top universities in Australia and the world.',
         website: 'https://www.unimelb.edu.au',
@@ -519,8 +524,7 @@ const seed = async () => {
         name: 'University of Toronto',
         country: 'Canada',
         city: 'Toronto',
-        logo: '/images/unis/toronto-logo.png',
-        coverImage: '/images/unis/toronto-cover.jpg',
+        coverImage: '/universities/university-of-toronto.jpg',
         shortDescription: 'Canada\'s top university and a global leader in research and innovation.',
         description: 'The University of Toronto is a public research university in Toronto, Ontario, Canada. Founded by royal charter in 1827, it is the oldest university in the province and one of the most prestigious in Canada.',
         website: 'https://www.utoronto.ca',
@@ -540,8 +544,7 @@ const seed = async () => {
         name: 'University of Sydney',
         country: 'Australia',
         city: 'Sydney',
-        logo: '/images/unis/sydney-logo.png',
-        coverImage: '/images/unis/sydney-cover.jpg',
+        coverImage: '/universities/university-of-sydney.jpg',
         shortDescription: 'Australia\'s first university with a reputation for academic excellence and graduate employability.',
         description: 'The University of Sydney is a public research university in Sydney, Australia. Founded in 1850, it is Australia\'s oldest university and is consistently ranked among the top universities in the world.',
         website: 'https://www.sydney.edu.au',
@@ -560,8 +563,7 @@ const seed = async () => {
         name: 'University of British Columbia',
         country: 'Canada',
         city: 'Vancouver',
-        logo: '/images/unis/ubc-logo.png',
-        coverImage: '/images/unis/ubc-cover.jpg',
+        coverImage: '/universities/university-of-british-columbia.jpg',
         shortDescription: 'A global centre for teaching, learning and research consistently ranked among the top 3 universities in Canada.',
         description: 'The University of British Columbia is a public research university with campuses in Vancouver and Kelowna, British Columbia. It is one of the top universities in Canada and is known for its research excellence.',
         website: 'https://www.ubc.ca',
@@ -580,8 +582,7 @@ const seed = async () => {
         name: 'University of Manchester',
         country: 'United Kingdom',
         city: 'Manchester',
-        logo: '/images/unis/manchester-logo.png',
-        coverImage: '/images/unis/manchester-cover.jpg',
+        coverImage: '/universities/university-of-manchester.jpg',
         shortDescription: 'A red brick university and a member of the Russell Group, known for groundbreaking discoveries.',
         description: 'The University of Manchester is a public research university in Manchester, England. It was formed in 2004 by the merger of the Victoria University of Manchester and the University of Manchester Institute of Science and Technology.',
         website: 'https://www.manchester.ac.uk',
@@ -600,8 +601,7 @@ const seed = async () => {
         name: 'Monash University',
         country: 'Australia',
         city: 'Melbourne',
-        logo: '/images/unis/monash-logo.png',
-        coverImage: '/images/unis/monash-cover.jpg',
+        coverImage: '/universities/monash-university.jpg',
         shortDescription: 'A member of the Group of Eight, known for pharmacy, engineering, and business programs.',
         description: 'Monash University is a public research university based in Melbourne, Australia. It was founded in 1958 and is the second oldest university in the state of Victoria.',
         website: 'https://www.monash.edu',
@@ -620,8 +620,7 @@ const seed = async () => {
         name: 'University of Waterloo',
         country: 'Canada',
         city: 'Waterloo',
-        logo: '/images/unis/waterloo-logo.png',
-        coverImage: '/images/unis/waterloo-cover.jpg',
+        coverImage: '/universities/university-of-waterloo.jpg',
         shortDescription: 'Home to the world\'s largest co-operative education program, located in Canada\'s tech hub.',
         description: 'The University of Waterloo is a public research university in Waterloo, Ontario, Canada. It is known for its cooperative education programs and is one of the top universities in Canada.',
         website: 'https://uwaterloo.ca',
@@ -640,8 +639,7 @@ const seed = async () => {
         name: 'University of Auckland',
         country: 'New Zealand',
         city: 'Auckland',
-        logo: '/images/unis/auckland-logo.png',
-        coverImage: '/images/unis/auckland-cover.jpg',
+        coverImage: '/universities/university-of-auckland.jpg',
         shortDescription: 'New Zealand\'s highest-ranked university, a member of the Group of Eight.',
         description: 'The University of Auckland is the largest university in New Zealand, located in the country\'s largest city. It is ranked first in New Zealand and is a member of the Universitas 21 network.',
         website: 'https://www.auckland.ac.nz',
@@ -660,8 +658,7 @@ const seed = async () => {
         name: 'National University of Singapore',
         country: 'Singapore',
         city: 'Singapore',
-        logo: '/images/unis/nus-logo.png',
-        coverImage: '/images/unis/nus-cover.jpg',
+        coverImage: '/universities/national-university-of-singapore.jpg',
         shortDescription: 'Asia\'s top university with a global approach to education and research.',
         description: 'The National University of Singapore is a public research university in Singapore. It is the oldest higher education institution in Singapore and consistently ranked as the top university in Asia.',
         website: 'https://www.nus.edu.sg',
@@ -680,8 +677,7 @@ const seed = async () => {
         name: 'RWTH Aachen University',
         country: 'Germany',
         city: 'Aachen',
-        logo: '/images/unis/rwth-logo.png',
-        coverImage: '/images/unis/rwth-cover.jpg',
+        coverImage: '/universities/rwth-aachen-university.jpg',
         shortDescription: 'Germany\'s largest technical university, renowned for engineering and natural sciences.',
         description: 'RWTH Aachen University is a public research university in Aachen, North Rhine-Westphalia, Germany. It is the largest technical university in Germany with about 45,000 students.',
         website: 'https://www.rwth-aachen.de',
@@ -926,7 +922,6 @@ const seed = async () => {
       {
         name: 'Rajesh Sharma',
         position: 'Managing Director',
-        avatar: '/images/team/rajesh.jpg',
         bio: 'With over 15 years of experience in the education consultancy industry, Rajesh has helped thousands of students achieve their dreams of studying abroad. He holds an MBA from the University of Sydney and is passionate about providing quality education guidance.',
         specialization: 'Australia & Canada',
         email: 'rajesh@eduvia.com',
@@ -940,7 +935,6 @@ const seed = async () => {
       {
         name: 'Priya Patel',
         position: 'Senior Counselor',
-        avatar: '/images/team/priya.jpg',
         bio: 'Priya specializes in UK and European education destinations. With a background in international education and a Master\'s degree from the University of Manchester, she provides expert guidance on university selection and application processes.',
         specialization: 'UK & Europe',
         email: 'priya@eduvia.com',
@@ -954,7 +948,6 @@ const seed = async () => {
       {
         name: 'Anil Kumar Thapa',
         position: 'Immigration Expert',
-        avatar: '/images/team/anil.jpg',
         bio: 'Anil is a registered migration agent with extensive knowledge of student visa processes for Australia, Canada, and New Zealand. He ensures every application is handled with precision and professionalism.',
         specialization: 'Visa & Immigration',
         email: 'anil@eduvia.com',
@@ -967,7 +960,6 @@ const seed = async () => {
       {
         name: 'Suman Gurung',
         position: 'Student Relations Manager',
-        avatar: '/images/team/suman.jpg',
         bio: 'Suman manages student relationships and ensures a smooth transition for students moving abroad. She helps with pre-departure orientation, accommodation arrangements, and ongoing support.',
         specialization: 'Student Support',
         email: 'suman@eduvia.com',
@@ -981,7 +973,6 @@ const seed = async () => {
       {
         name: 'Nisha Magar',
         position: 'Documentation Specialist',
-        avatar: '/images/team/nisha.jpg',
         bio: 'Nisha ensures all student documentation is complete and accurate for university applications and visa submissions. Her attention to detail has helped countless students avoid delays in their application process.',
         specialization: 'Documentation',
         email: 'nisha@eduvia.com',
@@ -1062,7 +1053,6 @@ const seed = async () => {
           'Application submission and follow-up',
         ],
         detailedContent: 'Our experienced counselors analyze your academic background, test scores, financial situation, and career aspirations to shortlist the best universities. We assist with the entire application process from filling out forms to writing compelling statements of purpose.',
-        image: '/images/services/university.jpg',
         order: 1,
       },
       {
@@ -1077,7 +1067,6 @@ const seed = async () => {
           'Mock visa interview preparation',
         ],
         detailedContent: 'Our immigration experts stay updated with the latest visa regulations for each country. We prepare you thoroughly for the visa process including financial documentation, health insurance, and interview preparation.',
-        image: '/images/services/visa.jpg',
         order: 2,
       },
       {
@@ -1092,7 +1081,6 @@ const seed = async () => {
           'Flexible class schedules',
         ],
         detailedContent: 'Our English test preparation program is designed to help you achieve your target score. We offer both in-person and online classes with experienced instructors who have achieved top scores themselves.',
-        image: '/images/services/english.jpg',
         order: 3,
       },
       {
@@ -1107,7 +1095,6 @@ const seed = async () => {
           'Interview preparation',
         ],
         detailedContent: 'We maintain an updated database of scholarships available for Nepali students. Our team helps you identify opportunities matching your profile and guides you through the application process.',
-        image: '/images/services/scholarship.jpg',
         order: 4,
       },
       {
@@ -1122,7 +1109,6 @@ const seed = async () => {
           'Document courier assistance',
         ],
         detailedContent: 'A well-crafted SOP and properly organized documents are crucial for university applications. Our documentation specialists help you present your profile in the best possible way.',
-        image: '/images/services/documentation.jpg',
         order: 5,
       },
       {
@@ -1137,7 +1123,6 @@ const seed = async () => {
           'Airport pickup coordination',
         ],
         detailedContent: 'Our pre-departure program ensures you are fully prepared for your journey. We cover everything from what to pack to how to open a bank account and navigate public transport.',
-        image: '/images/services/orientation.jpg',
         order: 6,
       },
       {
@@ -1152,7 +1137,6 @@ const seed = async () => {
           'Networking guidance',
         ],
         detailedContent: 'We help you choose courses and universities that align with your career goals. Our career counselors provide insights into job markets and industry demands in various countries.',
-        image: '/images/services/career.jpg',
         order: 7,
       },
       {
@@ -1167,7 +1151,6 @@ const seed = async () => {
           'Lease review assistance',
         ],
         detailedContent: 'Finding the right accommodation is crucial for a successful study experience. We help you find options that fit your budget and preferences, whether on-campus or private rental.',
-        image: '/images/services/accommodation.jpg',
         order: 8,
       },
       {
@@ -1182,7 +1165,6 @@ const seed = async () => {
           'City orientation tour',
         ],
         detailedContent: 'Our team or partners in your destination country will welcome you at the airport and help you settle in during your first few days. We ensure your transition is smooth and comfortable.',
-        image: '/images/services/airport.jpg',
         order: 9,
       },
       {
@@ -1197,7 +1179,6 @@ const seed = async () => {
           'Migration planning',
         ],
         detailedContent: 'We don\'t just help you get there — we help you stay and build your future. Our immigration experts guide you through visa extensions, graduate work visas, and permanent residency pathways.',
-        image: '/images/services/pr.jpg',
         order: 10,
       },
       {
@@ -1212,7 +1193,6 @@ const seed = async () => {
           'Follow-up and tracking',
         ],
         detailedContent: 'We assist families in reuniting through parent visa applications for countries like Australia, Canada, and New Zealand. Our team handles the complex documentation and application process.',
-        image: '/images/services/parent-visa.jpg',
         order: 11,
       },
       {
@@ -1227,7 +1207,6 @@ const seed = async () => {
           'Team building workshops',
         ],
         detailedContent: 'Eduvia offers corporate training programs designed to enhance professional skills. We provide customized training solutions for organizations looking to develop their workforce.',
-        image: '/images/services/training.jpg',
         order: 12,
       },
     ];
@@ -1277,7 +1256,6 @@ const seed = async () => {
       heroSettings: {
         title: 'Your Gateway to Global Education',
         subtitle: 'Empowering Nepali students to achieve their dreams of studying abroad since 2009',
-        backgroundImage: '/images/hero-bg.jpg',
       },
       seo: {
         title: 'Eduvia Consultancy - Study Abroad Consultancy in Nepal | Kathmandu',
@@ -1385,7 +1363,7 @@ const seed = async () => {
 <h2>Post-Study Work Opportunities</h2>
 <p>The Subclass 485 Graduate Visa allows you to stay and work in Australia for 2-4 years after graduation. This is an excellent pathway to gaining work experience and potentially permanent residency.</p>`,
         excerpt: 'Everything you need to know about studying in Australia as a Nepali student - from university selection to visa process and post-study work.',
-        featuredImage: '/images/blogs/study-in-australia.jpg',
+        featuredImage: '/blogs/study-in-australia.jpg',
         category: 'Destinations',
         tags: ['Australia', 'Study Abroad', 'Student Visa', 'Post-Study Work'],
         readTime: 8,
@@ -1425,7 +1403,7 @@ Both countries offer generous post-study work rights.</p>
 <h2>Our Verdict</h2>
 <p>The best choice depends on your budget, course preference, and career goals. Visit Eduvia for a personalized consultation to determine which country is right for you.</p>`,
         excerpt: 'A detailed comparison of Canada and Australia for Nepali students covering tuition, living costs, work rights, and PR pathways.',
-        featuredImage: '/images/blogs/canada-vs-australia.jpg',
+        featuredImage: '/blogs/canada-vs-australia.jpg',
         category: 'Comparisons',
         tags: ['Canada', 'Australia', 'Comparison', 'Study Abroad'],
         readTime: 6,
@@ -1463,7 +1441,7 @@ Both countries offer generous post-study work rights.</p>
 <h2>Sample SOP Structure</h2>
 <p>A typical SOP is 500-1000 words and follows a clear narrative arc. At Eduvia, we help students craft personalized, compelling SOPs that stand out.</p>`,
         excerpt: 'Learn how to write a compelling Statement of Purpose that gets you admitted to top universities abroad.',
-        featuredImage: '/images/blogs/sop-writing.jpg',
+        featuredImage: '/blogs/sop-writing.jpg',
         category: 'Tips',
         tags: ['SOP', 'Application Tips', 'University Application', 'Writing Tips'],
         readTime: 5,

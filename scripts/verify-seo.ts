@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import connectDB, { sequelize } from '../server/config/db.js';
+import connectDB, { sequelize, dbUrl } from '../server/config/db.js';
 import { buildSitemap, siteUrl } from '../server/services/sitemapService.js';
 import { makeSeoFromEntity } from '../server/utils/seoDefaults.js';
 
@@ -67,8 +67,8 @@ const run = async () => {
   if (!unknownOk) failures++;
   console.log(`  ${unknownOk ? 'OK  ' : 'FAIL'} unknown type  returns {} rather than a wrong template`);
 
-  if (!process.env.SUPABASE_DB_URL) {
-    console.log('\nSUPABASE_DB_URL not set — skipping the sitemap check.');
+  if (!dbUrl) {
+    console.log('\nNo database URL set (SUPABASE_DB_URL / POOLER_URL / DATABASE_URL) — skipping the sitemap check.');
     process.exit(failures ? 1 : 0);
   }
 

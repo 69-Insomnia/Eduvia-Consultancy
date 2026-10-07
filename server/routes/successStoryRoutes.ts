@@ -9,11 +9,12 @@ import {
 } from '../controllers/successStoryController';
 import auth from '../middleware/auth';
 import optionalAuth from '../middleware/optionalAuth';
+import publicCache from '../middleware/publicCache';
 
 const router = Router();
 
-router.get('/featured', getFeaturedSuccessStories);
-router.get('/', optionalAuth, getSuccessStories);
+router.get('/featured', publicCache(60), getFeaturedSuccessStories);
+router.get('/', optionalAuth, publicCache(60), getSuccessStories);
 
 router.post('/', auth, createSuccessStory);
 router.get('/:id', auth, getSuccessStory);

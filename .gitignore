@@ -8,6 +8,7 @@ dist/
 build/
 *.tsbuildinfo
 .next/
+.next-dev/
 out/
 
 # Environment

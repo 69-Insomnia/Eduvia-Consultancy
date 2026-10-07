@@ -4,7 +4,7 @@
 // Converted files import these symbols from here with the same names and
 // call signatures they used in react-router, so page/component bodies stay
 // untouched. Only the import specifier changed (see the port notes).
-import { useEffect } from 'react';
+import { forwardRef, useEffect } from 'react';
 import NextLink from 'next/link';
 import {
   usePathname,
@@ -70,23 +70,31 @@ function toHref(to: any): string {
   return to;
 }
 
-export function Link({ to, replace, state, reloadDocument, preventScrollReset, relative, ...rest }: any) {
-  return <NextLink href={toHref(to)} {...rest} />;
-}
+// forwardRef so ref-carrying wrappers (useSpotlight, focus traps) can attach to
+// the rendered <a>; NextLink already forwards refs to its own anchor.
+export const Link = forwardRef<any, any>(function Link(
+  { to, replace, state, reloadDocument, preventScrollReset, relative, ...rest },
+  ref
+) {
+  return <NextLink ref={ref} href={toHref(to)} {...rest} />;
+});
 
-export function NavLink({
-  to,
-  end,
-  className,
-  style,
-  children,
-  replace,
-  state,
-  reloadDocument,
-  preventScrollReset,
-  relative,
-  ...rest
-}: any) {
+export const NavLink = forwardRef<any, any>(function NavLink(
+  {
+    to,
+    end,
+    className,
+    style,
+    children,
+    replace,
+    state,
+    reloadDocument,
+    preventScrollReset,
+    relative,
+    ...rest
+  },
+  ref
+) {
   const pathname = usePathname();
   const href = toHref(to);
   const isActive = end
@@ -100,11 +108,11 @@ export function NavLink({
   const child = typeof children === 'function' ? children({ isActive, isPending: false, isTransitioning: false }) : children;
 
   return (
-    <NextLink href={href} className={cls} style={st} {...rest}>
+    <NextLink ref={ref} href={href} className={cls} style={st} {...rest}>
       {child}
     </NextLink>
   );
-}
+});
 
 export function Navigate({ to, replace }: any) {
   const router = useRouter();

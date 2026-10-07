@@ -20,5 +20,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
     return;
   }
-  app(req as any, res as any);
+  try {
+    app(req as any, res as any);
+  } catch (error: any) {
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: error?.message || 'Request failed',
+      });
+    }
+  }
 }

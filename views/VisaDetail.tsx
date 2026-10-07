@@ -220,10 +220,19 @@ export default function VisaDetail() {
       try {
         const res = await api.get(`/destinations/${slug}`);
         const dest = res.data?.destination || res.data;
-        if (dest.visaInformation) {
-          setVisaInfo(dest.visaInformation);
+        // `visaInfo` is the field the Destination model actually has; the
+        // hand-written VISA_DATA below stays the fallback for countries whose
+        // row only carries a one-line summary rather than the full document.
+        const raw = dest?.visaInformation || dest?.visaInfo;
+        const structured = raw && typeof raw === 'object' ? raw : null;
+        if (structured) {
+          setVisaInfo(structured);
+        } else if (VISA_DATA[slug]) {
+          setVisaInfo(VISA_DATA[slug]);
         } else {
-          setVisaInfo(VISA_DATA[slug] || null);
+          setVisaInfo(
+            dest?.name ? { name: dest.name, summary: typeof raw === 'string' ? raw : '' } : null
+          );
         }
       } catch {
         setVisaInfo(VISA_DATA[slug] || null);
@@ -247,6 +256,12 @@ export default function VisaDetail() {
 
   const v = visaInfo;
   const countryName = v.name || slug;
+  const quickFacts = [
+    { icon: Clock, label: 'Processing Time', value: v.processingTime },
+    { icon: DollarSign, label: 'Visa Fee', value: v.visaFee },
+    { icon: FileText, label: 'Work Rights', value: v.workRights },
+    { icon: Shield, label: 'Post-Study Work', value: v.postStudyWork },
+  ].filter((item) => item.value);
 
   const breadcrumbItems = [
     { label: 'Student Visa', link: '/student-visa' },
@@ -269,15 +284,11 @@ export default function VisaDetail() {
       />
 
       {/* Quick Info */}
-      <section className="border-b border-dark-200/70 bg-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: Clock, label: 'Processing Time', value: v.processingTime },
-              { icon: DollarSign, label: 'Visa Fee', value: v.visaFee },
-              { icon: FileText, label: 'Work Rights', value: v.workRights },
-              { icon: Shield, label: 'Post-Study Work', value: v.postStudyWork },
-            ].map((item, i) => (
+      {quickFacts.length > 0 && (
+        <section className="border-b border-dark-200/70 bg-white py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {quickFacts.map((item, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
@@ -291,41 +302,55 @@ export default function VisaDetail() {
                 <p className="text-sm font-semibold text-dark-900">{item.value}</p>
               </motion.div>
             ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Overview, for destinations whose row only carries a summary */}
+      {v.summary && (
+        <section className="bg-white py-12">
+          <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+            <SectionHeading eyebrow="Overview" title={`${countryName} Student Visa`} />
+            <p className="text-sm leading-relaxed text-dark-600">{v.summary}</p>
+          </div>
+        </section>
+      )}
 
       {/* Requirements */}
-      <section className="bg-dark-50 py-16 md:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionHeading eyebrow="Requirements" title="Visa Requirements" />
-          <div className="mx-auto max-w-4xl space-y-3">
-            {v.requirements.map((req, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-40px' }}
-                transition={{ delay: i * 0.06, duration: 0.45 }}
-                className="flex items-start gap-3 rounded-2xl border border-dark-200/70 bg-white p-4 shadow-soft"
-              >
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary-500" aria-hidden="true" />
-                <span className="text-sm text-dark-600">{req}</span>
-              </motion.div>
-            ))}
+      {v.requirements?.length > 0 && (
+        <section className="bg-dark-50 py-16 md:py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <SectionHeading eyebrow="Requirements" title="Visa Requirements" />
+            <div className="mx-auto max-w-4xl space-y-3">
+              {v.requirements.map((req, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-40px' }}
+                  transition={{ delay: i * 0.06, duration: 0.45 }}
+                  className="flex items-start gap-3 rounded-2xl border border-dark-200/70 bg-white p-4 shadow-soft"
+                >
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary-500" aria-hidden="true" />
+                  <span className="text-sm text-dark-600">{req}</span>
+                </motion.div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Documents Checklist */}
-      <section className="bg-white py-16 md:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionHeading eyebrow="Documents" title="Documents Checklist" />
-          <div className="mx-auto grid max-w-4xl gap-3 sm:grid-cols-2">
-            {v.documents.map((doc, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
+      {v.documents?.length > 0 && (
+        <section className="bg-white py-16 md:py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <SectionHeading eyebrow="Documents" title="Documents Checklist" />
+            <div className="mx-auto grid max-w-4xl gap-3 sm:grid-cols-2">
+              {v.documents.map((doc, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-40px' }}
                 transition={{ delay: i * 0.06, duration: 0.45 }}
@@ -335,9 +360,10 @@ export default function VisaDetail() {
                 <span className="text-sm text-dark-600">{doc}</span>
               </motion.div>
             ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Common Mistakes */}
       {v.commonMistakes && v.commonMistakes.length > 0 && (

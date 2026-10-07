@@ -1,7 +1,21 @@
 import type { Metadata } from 'next';
+import { Caveat, Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import Providers from '../components/Providers';
 import { resolveSiteUrl } from '../utils/siteUrl';
+import getBootstrapData from '../server/services/bootstrapData';
 import './globals.css';
+
+// Self-hosted through next/font: the render-blocking fonts.googleapis.com
+// stylesheet is gone, the files are served from this deployment with immutable
+// caching and `display=swap`, and the metrics are inlined to stop the layout
+// shift that webfont swapping used to cause.
+const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-jakarta',
+});
+const caveat = Caveat({ subsets: ['latin'], display: 'swap', variable: '--font-caveat' });
 
 // Metadata is evaluated at build time, where Vercel sets VERCEL_URL to this
 // deployment's own host — so a demo build points at itself, and a production
@@ -25,8 +39,6 @@ export const metadata: Metadata = {
     'scholarship guidance',
   ],
   authors: [{ name: 'Eduvia Consultancy Pvt. Ltd.' }],
-  robots: { index: true, follow: true },
-  alternates: { canonical: '/' },
   icons: {
     icon: [
       { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
@@ -79,24 +91,27 @@ const STRUCTURED_DATA = JSON.stringify({
   ],
 });
 
-export default function RootLayout({ children }: { children?: React.ReactNode }) {
+export default async function RootLayout({ children }: { children?: React.ReactNode }) {
+  // Settings and page-SEO overrides, read once server-side so the client does
+  // not have to fetch them on every page load. Cached — see bootstrapData.ts.
+  const { settings, pages } = await getBootstrapData();
+
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      className={`${inter.variable} ${jakarta.variable} ${caveat.variable}`}
+    >
       <head>
         <meta name="theme-color" content="#203890" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Caveat:wght@600;700&display=swap"
-          rel="stylesheet"
-        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: STRUCTURED_DATA }}
         />
       </head>
       <body>
-        <Providers>{children}</Providers>
+        <Providers initialSettings={settings} initialPageSeo={pages}>
+          {children}
+        </Providers>
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { Link } from '../../utils/router';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
@@ -11,7 +12,7 @@ import {
 import useSpotlight from '../../hooks/useSpotlight';
 import CountryFlag from './CountryFlag';
 
-export default function CountryCard({ destination, compact = false }: any) {
+export default function CountryCard({ destination, compact = false, priority = false }: any) {
   const { name, slug, flag, shortDescription } = destination;
   const spotRef = useSpotlight();
 
@@ -44,12 +45,14 @@ export default function CountryCard({ destination, compact = false }: any) {
       >
         <div className="relative aspect-[16/10] overflow-hidden bg-primary-50">
           {showImage ? (
-            <img
+            <Image
               src={src}
               alt={name}
-              loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              fill
+              priority={priority}
+              sizes="(max-width: 640px) 92vw, (max-width: 1024px) 46vw, 30vw"
               onError={handleImageError}
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">

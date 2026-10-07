@@ -1,6 +1,5 @@
 'use client';
 
-import { Helmet } from 'react-helmet-async';
 import { resolveSiteUrl } from '@/utils/siteUrl';
 
 export const SITE_URL = resolveSiteUrl();
@@ -81,18 +80,25 @@ export function buildOrganization(settings: any = {}) {
  * Renders one <script type="application/ld+json"> per node. Accepts a single
  * object or an array; null/false entries are skipped so callers can inline
  * conditional nodes.
+ *
+ * The tag is rendered straight into the component tree rather than through a
+ * head manager: the App Router has no runtime for injected head tags, so scripts
+ * pushed from a client component never reached the server HTML. JSON-LD is valid
+ * in the body, and this way crawlers that do not execute JavaScript still see it.
  */
 export default function StructuredData({ data }: any) {
   const nodes = (Array.isArray(data) ? data : [data]).filter(Boolean);
   if (!nodes.length) return null;
 
   return (
-    <Helmet>
+    <>
       {nodes.map((node, index) => (
-        <script key={index} type="application/ld+json">
-          {JSON.stringify(node)}
-        </script>
+        <script
+          key={index}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(node) }}
+        />
       ))}
-    </Helmet>
+    </>
   );
 }

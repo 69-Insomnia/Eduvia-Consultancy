@@ -81,13 +81,14 @@ export const UNIVERSITY_IMAGES = {
 /**
  * Ordered image candidates for a destination, most-trusted first.
  *
- * Seeded records predate the current asset layout, so a stored path is not
- * reliable on its own: they carry a dead `/images/` prefix, and use `uk.jpg` /
- * `usa.jpg` filenames that no longer exist. One record was slugged `dubai-uae`
- * while the asset map keyed on `dubai`; that record is now `united-arab-emirates`,
- * which both the map and the alias below cover. The component walks this list and
- * stops at the first image that actually loads, so a CMS upload still wins when
- * present but a stale record degrades to the bundled photo instead of a blank card.
+ * A stored path is not reliable on its own. Records written before the current
+ * asset layout settled carried a dead `/images/` prefix — the database rows were
+ * rewritten by `npm run fix:images`, but an uncorrected CMS value can still
+ * arrive here — and one record was slugged `dubai-uae` while the asset map
+ * keyed on `dubai`; that record is now `united-arab-emirates`, which both the
+ * map and the alias below cover. The component walks this list and stops at the
+ * first image that actually loads, so a CMS upload still wins when present but
+ * a stale record degrades to the bundled photo instead of a blank card.
  */
 export function destinationImageCandidates(storedPath, slug) {
   const out = [];
@@ -131,11 +132,13 @@ export const BLOG_IMAGES = {
 /**
  * Ordered image candidates for a blog post, most-trusted first.
  *
- * Seeded posts carry a dead `/images/blogs/...` prefix, so the stored path 404s
- * on its own and the old `featuredImage || fallback` test never fired (the
- * string was truthy, so the fallback was unreachable). Correcting the prefix
- * lands on the vendored file, the slug map covers posts whose filename drifted,
- * and the stock photo keeps a CMS-less record from rendering a blank card.
+ * Seeded posts used to carry a dead `/images/blogs/...` prefix, so the stored
+ * path 404s while still being truthy and the old `featuredImage || fallback`
+ * test never fired (the string was truthy, so the fallback was unreachable).
+ * Those rows were rewritten by `npm run fix:images`; the prefix strip below
+ * still covers an uncorrected value, the slug map covers posts whose filename
+ * drifted, and the stock photo keeps a CMS-less record from rendering a blank
+ * card.
  */
 export function blogImageCandidates(storedPath, slug) {
   const out = [];
@@ -153,13 +156,14 @@ export function blogImageCandidates(storedPath, slug) {
  * Ordered candidates for a CMS-managed image we hold no bundled copy of —
  * team headshots, university crests, and the like.
  *
- * The seed points these at `/images/...`, and no such files were ever uploaded,
- * so the stored path 404s while still being truthy — which is why the old
- * `photo ? <img/> : <placeholder/>` tests rendered a broken-image icon instead
- * of the placeholder. There is deliberately no stock replacement: passing a
- * stranger's face off as a named counselor, or a generic crest off as an
- * institution's mark, misrepresents the record. Callers supply their own
- * placeholder once these run out.
+ * The seed used to point these at `/images/...` and no such files were ever
+ * uploaded, so the stored path 404s while still being truthy — which is why the
+ * old `photo ? <img/> : <placeholder/>` tests rendered a broken-image icon
+ * instead of the placeholder. `npm run fix:images` cleared those rows, but the
+ * prefix strip below still tolerates an uncorrected one. There is deliberately
+ * no stock replacement: passing a stranger's face off as a named counselor, or a
+ * generic crest off as an institution's mark, misrepresents the record. Callers
+ * supply their own placeholder once these run out.
  */
 export function storedImageCandidates(storedPath) {
   const out = [];

@@ -171,7 +171,7 @@ export default function Blogs() {
                   viewport={{ once: true, margin: '-40px' }}
                   transition={{ delay: i * 0.06, duration: 0.45 }}
                 >
-                  <BlogCard blog={blog} />
+                  <BlogCard blog={blog} priority={i < 3} />
                 </motion.div>
               ))}
             </div>
@@ -197,7 +197,7 @@ export default function Blogs() {
                     viewport={{ once: true, margin: '-40px' }}
                     transition={{ delay: i * 0.06, duration: 0.45 }}
                   >
-                    <BlogCard blog={blog} />
+                    <BlogCard blog={blog} priority={i === 0} />
                   </motion.div>
                 ))}
               </div>

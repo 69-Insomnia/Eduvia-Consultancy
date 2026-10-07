@@ -1,7 +1,7 @@
 /**
  * End-to-end API + page checks against a running Eduvia server.
  *
- *   npm run e2e            # tests http://localhost:3001
+ *   npm run e2e            # tests http://localhost:3000 (npm run dev)
  *   BASE_URL=... npm run e2e
  *
  * Covers: SSR pages (incl. legacy wildcard redirect), every public read
@@ -10,7 +10,7 @@
  * Exits non-zero when any check fails.
  */
 
-const BASE = process.env.BASE_URL || 'http://localhost:3001';
+const BASE = process.env.BASE_URL || 'http://localhost:3000';
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@eduvia.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'admin123';
 

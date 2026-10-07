@@ -24,7 +24,7 @@ import Logo from '../components/common/Logo';
 import CountryFlag from '../components/common/CountryFlag';
 import Navbar from '../components/layout/Navbar';
 import { DESTINATIONS } from '../utils/constants';
-import defaultLogo from '../assets/logo.png';
+import defaultLogo from '../utils/brandLogo';
 
 const QUICK_LINKS = [
   { label: 'About Us', path: '/about' },

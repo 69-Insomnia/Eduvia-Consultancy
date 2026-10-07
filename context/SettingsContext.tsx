@@ -86,9 +86,16 @@ function normalizeSettings(raw) {
   };
 }
 
-export function SettingsProvider({ children }: any) {
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState(true);
+export function SettingsProvider({ children, initialSettings }: any) {
+  // The root layout reads settings server-side and passes them down, so the
+  // browser normally has them before React hydrates and must not fetch again.
+  // The fetch below stays as the fallback for when it did not (e.g. the
+  // database was briefly unreachable during revalidation).
+  const hasInitial = Boolean(initialSettings);
+  const [settings, setSettings] = useState(() =>
+    hasInitial ? { ...DEFAULT_SETTINGS, ...normalizeSettings(initialSettings) } : DEFAULT_SETTINGS
+  );
+  const [loading, setLoading] = useState(!hasInitial);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -102,8 +109,8 @@ export function SettingsProvider({ children }: any) {
   }, []);
 
   useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    if (!hasInitial) fetchSettings();
+  }, [fetchSettings, hasInitial]);
 
   useEffect(() => {
     // Only swap the favicon when the CMS explicitly provides one. The logo is a

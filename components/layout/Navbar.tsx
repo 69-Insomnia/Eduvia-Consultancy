@@ -25,7 +25,7 @@ import { useSettings } from '../../context/SettingsContext';
 import Logo from '../common/Logo';
 import CountryFlag from '../common/CountryFlag';
 import { DESTINATIONS } from '../../utils/constants';
-import defaultLogo from '../../assets/logo.png';
+import defaultLogo from '../../utils/brandLogo';
 
 const NAV_LINKS = [
   { label: 'Home', path: '/' },

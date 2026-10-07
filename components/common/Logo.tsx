@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { GraduationCap } from 'lucide-react';
-import defaultLogo from '../../assets/logo.png';
+import defaultLogo from '../../utils/brandLogo';
 
 /**
  * Brand mark.

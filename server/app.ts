@@ -52,10 +52,30 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// The library's default keyGenerator validates `request.ip` and throws when a
+// platform (Vercel's API request mock) exposes no socket address, which turns
+// every /api request into a 500. Build the key defensively instead.
+const clientKey = (req) => {
+  try {
+    if (req.ip) return req.ip;
+  } catch {
+    /* req.ip can throw when the request has no socket — fall through */
+  }
+  const xff = req.headers['x-forwarded-for'];
+  const first = (Array.isArray(xff) ? xff[0] : xff || '').split(',')[0].trim();
+  if (first) return first;
+  try {
+    return req.socket?.remoteAddress || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+};
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
   message: { success: false, message: 'Too many requests, please try again later' },
+  keyGenerator: clientKey,
 });
 app.use('/api/', limiter);
 

@@ -19,26 +19,30 @@ const PageSeoContext = createContext(null);
  * compiled into it — the site must render sensible metadata even when the API
  * is unreachable.
  */
-export function PageSeoProvider({ children }: any) {
-  const [pages, setPages] = useState<any>({});
+/** Turns the API's `[{ key, seo }]` list into the `{ key: seo }` lookup. */
+const toSeoMap = (list) =>
+  Object.fromEntries(
+    (list || []).filter((page) => page?.key).map((page) => [page.key, page.seo || {}])
+  );
+
+export function PageSeoProvider({ children, initialPages }: any) {
+  // Read server-side by the root layout, so there is normally nothing to fetch
+  // on mount. The fetch below remains the fallback when it came back empty.
+  const hasInitial = Boolean(initialPages && initialPages.length);
+  const [pages, setPages] = useState<any>(() => toSeoMap(initialPages));
 
   const fetchPageSeo = useCallback(async () => {
     try {
       const res = await api.get('/page-seo');
-      const list = res.data?.pages || [];
-      setPages(
-        Object.fromEntries(
-          list.filter((page) => page?.key).map((page) => [page.key, page.seo || {}])
-        )
-      );
+      setPages(toSeoMap(res.data?.pages));
     } catch {
       // keep the empty map; pages use their built-in defaults
     }
   }, []);
 
   useEffect(() => {
-    fetchPageSeo();
-  }, [fetchPageSeo]);
+    if (!hasInitial) fetchPageSeo();
+  }, [fetchPageSeo, hasInitial]);
 
   /**
    * Returns the stored override for a page key, or `undefined` when the page

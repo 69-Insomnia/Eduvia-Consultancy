@@ -17,9 +17,13 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { Sequelize, QueryTypes } from 'sequelize';
 
-import { sequelize } from '../server/config/db.js';
+import { sequelize, dbUrl } from '../server/config/db.js';
 
-const MAIN_URL = process.env.SUPABASE_DB_URL;
+const MAIN_URL = dbUrl;
+if (!MAIN_URL) {
+  console.error('[migrate] no database URL set (SUPABASE_DB_URL / POOLER_URL / DATABASE_URL)');
+  process.exit(1);
+}
 const scratchUrl = (name) => MAIN_URL.replace(/\/([^/?]+)(\?|$)/, `/${name}$2`);
 
 const isNoise = (sql) =>

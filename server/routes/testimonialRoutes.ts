@@ -9,11 +9,12 @@ import {
 } from '../controllers/testimonialController';
 import auth from '../middleware/auth';
 import optionalAuth from '../middleware/optionalAuth';
+import publicCache from '../middleware/publicCache';
 
 const router = Router();
 
-router.get('/featured', getFeaturedTestimonials);
-router.get('/', optionalAuth, getTestimonials);
+router.get('/featured', publicCache(60), getFeaturedTestimonials);
+router.get('/', optionalAuth, publicCache(60), getTestimonials);
 
 router.post('/', auth, createTestimonial);
 router.get('/:id', auth, getTestimonial);

@@ -45,7 +45,7 @@
   }
 
   body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
     color: var(--color-text);
     background-color: var(--color-bg);
     line-height: 1.65;
@@ -59,7 +59,7 @@
   h4,
   h5,
   h6 {
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    font-family: var(--font-jakarta), var(--font-inter), system-ui, sans-serif;
     line-height: 1.18;
     font-weight: 700;
     letter-spacing: -0.02em;

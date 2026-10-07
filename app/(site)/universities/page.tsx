@@ -1,6 +1,9 @@
 import { Suspense } from 'react';
 import LoadingSpinner from '../../../components/common/LoadingSpinner';
 import View from '../../../views/Universities';
+import { getPageMetadata } from '../../../server/services/pageMetadata';
+
+export const generateMetadata = () => getPageMetadata('universities');
 
 export default function Page() {
   return (

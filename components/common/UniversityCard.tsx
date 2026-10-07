@@ -1,13 +1,14 @@
 'use client';
 
 import { Link } from '../../utils/router';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { MapPin, ArrowRight, GraduationCap } from 'lucide-react';
 import { SITE_IMAGES, UNIVERSITY_IMAGES } from '../../utils/imageAssets';
 import useSpotlight from '../../hooks/useSpotlight';
 
-export default function UniversityCard({ university, compact = false }: any) {
+export default function UniversityCard({ university, compact = false, priority = false }: any) {
   const { name, slug, logo, coverImage, country, city, popularCourses, programs } = university;
   const location = [city, country].filter(Boolean).join(', ');
   const spotRef = useSpotlight();
@@ -19,8 +20,8 @@ export default function UniversityCard({ university, compact = false }: any) {
     : [...new Set((programs || []).map((p) => p?.degree).filter(Boolean))];
 
   const mapped = UNIVERSITY_IMAGES[slug];
-  // CMS cover art first, then the bundled campus photo, then the stock fallback.
-  // Seeded values point at files that were never uploaded, so the chain matters.
+  // CMS cover art first, then the bundled campus photo, then the stock fallback —
+  // an upload can still be moved or deleted behind the record's back.
   const [src, setSrc] = useState(coverImage || mapped || SITE_IMAGES.universityFallback);
   const [imageFailed, setImageFailed] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
@@ -49,13 +50,15 @@ export default function UniversityCard({ university, compact = false }: any) {
       >
         <div className="relative aspect-[16/10] overflow-hidden bg-primary-50">
           {showImage ? (
-            <img
+            <Image
               src={src}
               alt=""
               aria-hidden="true"
-              loading="lazy"
+              fill
+              priority={priority}
+              sizes="(max-width: 640px) 92vw, (max-width: 1024px) 46vw, 30vw"
               onError={handleImageError}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-100 to-secondary-100">

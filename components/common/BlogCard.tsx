@@ -8,7 +8,7 @@ import { formatDateShort } from '../../utils/helpers';
 import useSpotlight from '../../hooks/useSpotlight';
 import SmartImage from './SmartImage';
 
-export default function BlogCard({ blog, compact = false }: any) {
+export default function BlogCard({ blog, compact = false, priority = false }: any) {
   const { title, excerpt, featuredImage, category, author, createdAt, readTime, slug } = blog;
   const spotRef = useSpotlight();
 
@@ -26,6 +26,7 @@ export default function BlogCard({ blog, compact = false }: any) {
           <SmartImage
             candidates={blogImageCandidates(featuredImage, slug)}
             alt=""
+            priority={priority}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
           {category && (

@@ -85,6 +85,11 @@ existing admin sessions are invalidated and users must sign in again.
 
 ### Database Setup
 
+`npm run seed` is for local development only: it truncates existing content and
+creates the demo admin account. It is blocked when `NODE_ENV=production`. Do not
+run it against production; apply reviewed schema migrations and intended
+additive imports instead.
+
 ```bash
 npm run seed
 ```
@@ -107,11 +112,14 @@ npm run dev
 - API: http://localhost:3000/api (Express, same origin — no CORS in dev)
 - Admin Panel: http://localhost:3000/admin/login
 
-### Admin Login
+### Local Demo Admin Login (Development Only)
 
 - URL: `/admin/login`
 - Email: `admin@eduvia.com`
 - Password: `admin123`
+
+These credentials are created only by the local demo seeder. Never use them in
+production; provision a unique admin account and password before launch.
 
 ## Project Structure
 
@@ -215,22 +223,17 @@ environment before testing the deployed API; do not run migrations or seed
 scripts as part of the Vercel build.
 
 ### Custom domain DNS
-Add these records at your domain registrar for `eduviaconsultancy.com`:
-
-| Type    | Name | Value                  | Purpose                  |
-|---------|------|------------------------|--------------------------|
-| A       | `@`  | `76.76.21.21`          | apex → Vercel            |
-| CNAME   | `www`| `cname.vercel-dns.com` | www → Vercel             |
-
-Then in Vercel → Project → **Settings → Domains**, add `eduviaconsultancy.com`
-and `www.eduviaconsultancy.com`, and set the apex as canonical (Vercel
-auto-redirects www → apex).
+In Vercel → Project → **Settings → Domains**, add your domain(s) and follow the
+DNS records Vercel displays for your project. DNS targets can vary by project
+and provider, so use those displayed values rather than copying fixed records
+from this guide. Set `SITE_URL` and `NEXT_PUBLIC_SITE_URL` to the chosen
+canonical HTTPS origin.
 
 ### Verify
 - `https://eduviaconsultancy.com/` loads and lists real data
 - `https://eduviaconsultancy.com/api/blogs` returns JSON
 - `https://eduviaconsultancy.com/sitemap.xml` returns XML
-- Admin login at `/admin/login` (`admin@eduvia.com` / `admin123` — change after launch)
+- Admin login at `/admin/login` using the unique production admin credentials you provisioned
 - Inquiry/contact forms write to the Supabase dashboard (Table Editor)
 
 Notes:

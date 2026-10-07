@@ -39,6 +39,31 @@ function formatShortDate(value) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+/**
+ * Collapses the chart payload into the 12-point series the monthly bar chart
+ * draws. The endpoint buckets the last six months as
+ * `{ _id: { year, month }, count }`, while older payloads were a plain array —
+ * both shapes are accepted so a schema change cannot blank the chart again.
+ */
+function toMonthlySeries(trend) {
+  const series = new Array(12).fill(0);
+  if (!Array.isArray(trend)) return series;
+
+  const currentYear = new Date().getFullYear();
+  trend.forEach((point, index) => {
+    if (typeof point === 'number') {
+      series[index] = point;
+      return;
+    }
+    const month = point?._id?.month ?? point?.month;
+    const year = point?._id?.year ?? point?.year;
+    if (month >= 1 && month <= 12 && (year === undefined || year === currentYear)) {
+      series[month - 1] += Number(point?.count) || 0;
+    }
+  });
+  return series;
+}
+
 function StatCard({ icon: Icon, label, value, color }: any) {
   return (
     <motion.div
@@ -50,8 +75,8 @@ function StatCard({ icon: Icon, label, value, color }: any) {
         <Icon className="h-5 w-5" aria-hidden="true" />
       </div>
       <p className="text-2xl font-bold tabular-nums text-dark-900">{value}</p>
-      {/* Full card width: side-by-side with the icon, "Active Applications" had
-          ~87px and ellipsised to "Active A...". */}
+      {/* Full card width: side-by-side with the icon, "Total Applications" had
+          ~87px and ellipsised to "Total A...". */}
       <p className="mt-0.5 text-sm text-dark-500">{label}</p>
     </motion.div>
   );
@@ -138,11 +163,10 @@ export default function Dashboard() {
     );
   }
 
-  const d = stats || {};
+  // The endpoint wraps its payload in `{ success, stats }`.
+  const d = stats?.stats || stats || {};
   const inquiries = Array.isArray(d.recentInquiries) ? d.recentInquiries : [];
-  const monthlyData = Array.isArray(d.monthlyInquiries) && d.monthlyInquiries.length
-    ? d.monthlyInquiries
-    : new Array(12).fill(0);
+  const monthlyData = toMonthlySeries(d.monthlyInquiryTrend ?? d.monthlyInquiries);
   const maxVal = Math.max(...monthlyData, 1);
 
   const chartSummary = monthlyData
@@ -153,7 +177,7 @@ export default function Dashboard() {
     { icon: MessageSquare, label: 'Total Inquiries', value: d.totalInquiries || 0, color: 'bg-primary-50 text-primary-600' },
     { icon: TrendingUp, label: 'New This Week', value: d.newInquiriesThisWeek || 0, color: 'bg-green-50 text-green-600' },
     { icon: Users, label: 'Total Students', value: d.totalStudents || 0, color: 'bg-purple-50 text-purple-600' },
-    { icon: FileCheck, label: 'Active Applications', value: d.activeApplications || 0, color: 'bg-amber-50 text-amber-600' },
+    { icon: FileCheck, label: 'Total Applications', value: d.totalApplications || 0, color: 'bg-amber-50 text-amber-600' },
     { icon: BookOpen, label: 'Published Blogs', value: d.publishedBlogs || 0, color: 'bg-secondary-50 text-secondary-600' },
     { icon: Landmark, label: 'Universities', value: d.totalUniversities || 0, color: 'bg-accent-50 text-accent-600' },
   ];

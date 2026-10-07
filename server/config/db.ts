@@ -1,17 +1,23 @@
 import 'dotenv/config';
 import { Sequelize } from 'sequelize';
 
-const url = process.env.SUPABASE_DB_URL;
+// Postgres endpoint for this deployment. Three names are accepted so `.env`
+// can use whichever convention it was generated with: Supabase's CLI writes
+// `POOLER_URL`/`DATABASE_URL`, older copies of this file used `SUPABASE_DB_URL`.
+// Order matters — the transaction pooler first, direct connection last.
+export const dbUrl =
+  process.env.SUPABASE_DB_URL || process.env.POOLER_URL || process.env.DATABASE_URL || '';
+
 const requestedPoolMax = Number(process.env.DB_POOL_MAX || 1);
 const poolMax = Number.isInteger(requestedPoolMax) && requestedPoolMax > 0 ? requestedPoolMax : 1;
-if (!url) {
-  console.error('[db] SUPABASE_DB_URL is not set — API requests will return 503');
+if (!dbUrl) {
+  console.error('[db] no database URL set (SUPABASE_DB_URL / POOLER_URL / DATABASE_URL) — API requests will return 503');
 }
 
 // When the env var is missing we still need a syntactically valid URL so that
 // importing this module (e.g. during `next build`) never crashes the process.
 // ensureDb() rejects before any query runs in that case.
-const sequelize = new Sequelize(url || 'postgresql://127.0.0.1:1/unavailable', {
+const sequelize = new Sequelize(dbUrl || 'postgresql://127.0.0.1:1/unavailable', {
   dialect: 'postgres',
   logging: false,
   dialectOptions: {
@@ -28,8 +34,8 @@ const sequelize = new Sequelize(url || 'postgresql://127.0.0.1:1/unavailable', {
 let connectPromise: Promise<void> | null = null;
 
 const connectDB = async (): Promise<void> => {
-  if (!process.env.SUPABASE_DB_URL) {
-    throw new Error('SUPABASE_DB_URL is not set');
+  if (!dbUrl) {
+    throw new Error('No database URL set (SUPABASE_DB_URL / POOLER_URL / DATABASE_URL)');
   }
   if (!connectPromise) {
     connectPromise = sequelize
@@ -37,7 +43,7 @@ const connectDB = async (): Promise<void> => {
       .then(() => {
         const host = (() => {
           try {
-            return new URL(process.env.SUPABASE_DB_URL).host;
+            return new URL(dbUrl).host;
           } catch {
             return 'supabase';
           }

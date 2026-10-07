@@ -12,12 +12,13 @@ import {
 } from '../controllers/blogController';
 import auth from '../middleware/auth';
 import optionalAuth from '../middleware/optionalAuth';
+import publicCache from '../middleware/publicCache';
 
 const router = Router();
 
 // optionalAuth: only an authenticated admin may request drafts (isPublished=all).
-router.get('/', optionalAuth, getBlogs);
-router.get('/:slug', getBlogBySlug);
+router.get('/', optionalAuth, publicCache(60), getBlogs);
+router.get('/:slug', publicCache(60), getBlogBySlug);
 
 router.post('/', auth, createBlog);
 router.put('/:id', auth, updateBlog);

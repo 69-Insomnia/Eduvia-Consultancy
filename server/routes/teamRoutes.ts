@@ -9,11 +9,12 @@ import {
 } from '../controllers/teamController';
 import auth from '../middleware/auth';
 import optionalAuth from '../middleware/optionalAuth';
+import publicCache from '../middleware/publicCache';
 
 const router = Router();
 
 router.get('/all', auth, getAllTeamMembers);
-router.get('/', optionalAuth, getTeamMembers);
+router.get('/', optionalAuth, publicCache(60), getTeamMembers);
 
 router.post('/', auth, createTeamMember);
 router.get('/:id', auth, getTeamMember);

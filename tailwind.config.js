@@ -75,10 +75,12 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+        // Variable names come from next/font in app/layout.tsx, so the families
+        // are served from this origin instead of fonts.googleapis.com.
+        sans: ['var(--font-inter)', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['var(--font-jakarta)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
         // Handwritten accents ("Your Dreams Our Guidance")
-        script: ['Caveat', 'Segoe Script', 'cursive'],
+        script: ['var(--font-caveat)', 'Segoe Script', 'cursive'],
       },
       borderRadius: {
         '4xl': '2rem',

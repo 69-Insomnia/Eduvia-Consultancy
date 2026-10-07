@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from '../utils/router';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import {
   GraduationCap,
   Globe,
@@ -297,9 +298,13 @@ export default function Home() {
                 className="relative overflow-hidden shadow-strong"
                 style={{ borderRadius: '44% 56% 40% 60% / 30% 30% 70% 70%' }}
               >
-                <img
+                <Image
                   src="/hero-student.jpg"
                   alt="A student heading to campus with a backpack and notebook"
+                  width={1200}
+                  height={1500}
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 50vw"
                   className="aspect-[4/5] w-full object-cover"
                 />
               </div>
@@ -407,7 +412,15 @@ export default function Home() {
                 className={`${item.cls} -ml-4 overflow-hidden rounded-full border-4 border-white shadow-medium first:ml-0`}
                 style={{ zIndex: 3 - i }}
               >
-                <img src={item.src} alt="" className="h-full w-full object-cover" />
+                  <Image
+                    src={item.src}
+                    alt=""
+                    aria-hidden="true"
+                    width={112}
+                    height={112}
+                    sizes="112px"
+                    className="h-full w-full object-cover"
+                  />
               </span>
             ))}
           </div>

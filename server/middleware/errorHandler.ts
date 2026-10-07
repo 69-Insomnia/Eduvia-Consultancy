@@ -25,7 +25,10 @@ const errorHandler = (err, req, res, _next) => {
     return res.status(400).json({ success: false, message: error.message });
   }
 
-  if (err.name === 'ValidationError' || err.name === 'SequelizeValidationError') {
+  if (
+    (err.name === 'ValidationError' || err.name === 'SequelizeValidationError') &&
+    Array.isArray(err.errors)
+  ) {
     const messages = err.errors.map((e) => e.message);
     return res.status(400).json({ success: false, message: messages.join(', ') });
   }

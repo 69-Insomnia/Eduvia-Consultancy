@@ -125,7 +125,7 @@ export default function StudyAbroad() {
                   viewport={{ once: true, margin: '-40px' }}
                   transition={{ delay: i * 0.06, duration: 0.45 }}
                 >
-                  <CountryCard destination={dest} />
+                  <CountryCard destination={dest} priority={i < 3} />
                 </motion.div>
               ))}
             </div>
