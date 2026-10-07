@@ -11,6 +11,6 @@ export default async function handler(_req: NextApiRequest, res: NextApiResponse
   })();
   const db = await connectDB()
     .then(() => 'connected')
-    .catch((e) => `error: ${e.message}`);
-  res.status(200).json({ ok: true, probe: 'db', hasUrl: Boolean(dbUrl), host, db });
+    .catch((e) => `error: ${e.message} | code: ${e.parent?.code || e.original?.code || e.code || '?'} | ${String(e.stack || '').slice(0, 400)}`);
+  res.status(200).json({ ok: true, probe: 'db', hasUrl: Boolean(dbUrl), host, node: process.version, db });
 }
