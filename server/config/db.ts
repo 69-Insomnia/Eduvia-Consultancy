@@ -1,5 +1,9 @@
 import 'dotenv/config';
 import { Sequelize } from 'sequelize';
+// Sequelize loads the driver with a dynamic require("pg") that Vercel's file
+// tracer cannot follow, so the serverless bundle would lack node_modules/pg
+// and crash at import. Import it here (statically traced) and hand it over.
+import pg from 'pg';
 
 // Postgres endpoint for this deployment. Three names are accepted so `.env`
 // can use whichever convention it was generated with: Supabase's CLI writes
@@ -19,6 +23,7 @@ if (!dbUrl) {
 // ensureDb() rejects before any query runs in that case.
 const sequelize = new Sequelize(dbUrl || 'postgresql://127.0.0.1:1/unavailable', {
   dialect: 'postgres',
+  dialectModule: pg,
   logging: false,
   dialectOptions: {
     ssl: {
