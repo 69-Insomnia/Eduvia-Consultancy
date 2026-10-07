@@ -59,13 +59,13 @@ cp .env.example .env
 
 Required:
 
-- `SUPABASE_DB_URL` — Supabase Postgres connection string. Use the **Session
-  pooler** URI (Project Settings → Database → Connection string → Session
-  pooler, port 6543, username `postgres.<project-ref>`); it has IPv4
-  addresses. The direct host (`db.<project-ref>.supabase.co`) is IPv6-only and
-  fails with `ENOTFOUND` on IPv4-only networks. SSL is configured in
+- `SUPABASE_DB_URL` — Supabase Postgres connection string. For Vercel/serverless,
+  use the **Transaction pooler** URI (Supabase Connect → Transaction pooler,
+  port 6543, username `postgres.<project-ref>`). SSL is configured in
   `server/config/db.ts`, so drop any `?sslmode=` query parameter from the URI.
 - `JWT_SECRET` — Secret key for JWT tokens
+- `DB_POOL_MAX` — Optional maximum Sequelize connections per serverless instance
+  (defaults to `1`; raise only after checking Supabase connection capacity).
 
 Optional:
 
@@ -75,6 +75,13 @@ Optional:
   `https://eduviaconsultancy.com`)
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` —
   for admin media uploads
+
+Generate a unique signing key with a cryptographically secure random generator
+(at least 32 random bytes). Put it in local `.env` for development and add the
+same value as the `JWT_SECRET` environment variable in your hosting dashboard
+(for example, Vercel → Project Settings → Environment Variables); then restart
+or redeploy. Do not commit `.env` or share the key. If the key is changed later,
+existing admin sessions are invalidated and users must sign in again.
 
 ### Database Setup
 
@@ -186,17 +193,26 @@ npm run e2e        # optional end-to-end verification
 
 ## Deployment (Vercel) — eduviaconsultancy.com
 
-One deployment: Vercel detects Next.js at the repo root — no config files,
-no second service. The Express API runs inside the same serverless functions
-as the pages, talking to Supabase through the IPv4 Session pooler.
+One deployment: Vercel detects Next.js at the repo root — no `vercel.json` or
+second service is required. The Express API runs inside the same serverless
+functions as the pages, talking to Supabase through the Transaction pooler.
 
 1. Push the repo to GitHub.
 2. In [Vercel](https://vercel.com): **Add New → Project** → import the repo.
    Root Directory: repo root (default); framework preset **Next.js** (auto).
-3. Set environment variables: `SUPABASE_DB_URL`, `JWT_SECRET` (Production and
-   Preview), optionally `CORS_ORIGIN`, `SITE_URL`, `NEXT_PUBLIC_SITE_URL`,
-   `SITE_URL` and the Cloudinary keys.
+3. Set `SUPABASE_DB_URL` and `JWT_SECRET` in Vercel → Project → Settings →
+  Environment Variables. Add `DB_POOL_MAX=1`; set `SITE_URL` and
+  `NEXT_PUBLIC_SITE_URL` to the canonical HTTPS domain. Add `CORS_ORIGIN` only
+  if a separate browser origin calls the API, and add the three Cloudinary
+  variables if admin media uploads are required. Configure Production and
+  Preview separately; use a non-production database for Preview where possible.
 4. Deploy; verify the preview URL loads.
+
+Vercel does not receive the ignored local `.env` file. Add variables in the
+Vercel dashboard, then redeploy after creating or changing them. Apply the
+database schema and seed/import the intended content from a trusted local
+environment before testing the deployed API; do not run migrations or seed
+scripts as part of the Vercel build.
 
 ### Custom domain DNS
 Add these records at your domain registrar for `eduviaconsultancy.com`:
@@ -227,7 +243,7 @@ Notes:
 
 ### Database (Supabase)
 1. Create a project at supabase.com
-2. Copy the **Session pooler** URI (Project Settings → Database → Connection string → Session pooler: port 6543, username `postgres.<project-ref>`) into `SUPABASE_DB_URL`. Prefer the pooler over the direct `db.<project-ref>.supabase.co` host, which is IPv6-only and unreachable from IPv4-only machines.
+2. Copy the **Transaction pooler** URI (Supabase Connect → Transaction pooler: port 6543, username `postgres.<project-ref>`) into `SUPABASE_DB_URL` for Vercel. Use the exact URI Supabase provides.
 3. Apply the schema: `npm run migrate` (also regenerates `supabase/migrations/*_init_schema.sql`)
 4. Seed sample data: `npm run seed`
 5. Optional, for managing migrations with the Supabase CLI:

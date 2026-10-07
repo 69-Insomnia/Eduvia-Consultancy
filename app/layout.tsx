@@ -1,9 +1,16 @@
 import type { Metadata } from 'next';
 import Providers from '../components/Providers';
+import { resolveSiteUrl } from '../utils/siteUrl';
 import './globals.css';
 
+// Metadata is evaluated at build time, where Vercel sets VERCEL_URL to this
+// deployment's own host — so a demo build points at itself, and a production
+// build with SITE_URL set points at the custom domain.
+const SITE_URL = resolveSiteUrl();
+const OG_IMAGE = `${SITE_URL}/og-image.jpg`;
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://eduviaconsultancy.com'),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'Eduvia Consultancy Pvt. Ltd. | Study Abroad from Nepal',
     template: '%s | Eduvia Consultancy',
@@ -33,9 +40,9 @@ export const metadata: Metadata = {
     title: 'Eduvia Consultancy Pvt. Ltd. | Study Abroad from Nepal',
     description:
       'Expert guidance for university selection, applications, scholarships and student visas for Nepali students.',
-    url: 'https://eduviaconsultancy.com/',
+    url: `${SITE_URL}/`,
     images: [
-      { url: 'https://eduviaconsultancy.com/og-image.jpg', width: 1200, height: 630 },
+      { url: OG_IMAGE, width: 1200, height: 630 },
     ],
     locale: 'en_US',
   },
@@ -44,13 +51,33 @@ export const metadata: Metadata = {
     title: 'Eduvia Consultancy Pvt. Ltd. | Study Abroad from Nepal',
     description:
       'Expert guidance for university selection, applications, scholarships and student visas for Nepali students.',
-    images: ['https://eduviaconsultancy.com/og-image.jpg'],
+    images: [OG_IMAGE],
   },
 };
 
 // Static social + structured-data fallbacks (same @ids as StructuredData.tsx
 // so the two graphs merge into one entity).
-const STRUCTURED_DATA = `{"@context":"https://schema.org","@graph":[{"@type":"EducationalOrganization","@id":"https://eduviaconsultancy.com/#organization","name":"Eduvia Consultancy Pvt. Ltd.","url":"https://eduviaconsultancy.com/","logo":"https://eduviaconsultancy.com/logo.png","description":"Education consultancy in Nepal guiding students through university selection, applications, scholarships and student visas."},{"@type":"WebSite","@id":"https://eduviaconsultancy.com/#website","name":"Eduvia Consultancy","url":"https://eduviaconsultancy.com/","publisher":{"@id":"https://eduviaconsultancy.com/#organization"}}]}`;
+const STRUCTURED_DATA = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'EducationalOrganization',
+      '@id': `${SITE_URL}/#organization`,
+      name: 'Eduvia Consultancy Pvt. Ltd.',
+      url: `${SITE_URL}/`,
+      logo: `${SITE_URL}/logo.png`,
+      description:
+        'Education consultancy in Nepal guiding students through university selection, applications, scholarships and student visas.',
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      name: 'Eduvia Consultancy',
+      url: `${SITE_URL}/`,
+      publisher: { '@id': `${SITE_URL}/#organization` },
+    },
+  ],
+});
 
 export default function RootLayout({ children }: { children?: React.ReactNode }) {
   return (

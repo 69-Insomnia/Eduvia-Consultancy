@@ -2,6 +2,8 @@ import 'dotenv/config';
 import { Sequelize } from 'sequelize';
 
 const url = process.env.SUPABASE_DB_URL;
+const requestedPoolMax = Number(process.env.DB_POOL_MAX || 1);
+const poolMax = Number.isInteger(requestedPoolMax) && requestedPoolMax > 0 ? requestedPoolMax : 1;
 if (!url) {
   console.error('[db] SUPABASE_DB_URL is not set — API requests will return 503');
 }
@@ -18,7 +20,9 @@ const sequelize = new Sequelize(url || 'postgresql://127.0.0.1:1/unavailable', {
       rejectUnauthorized: false,
     },
   },
-  pool: { max: 10, min: 0, acquire: 30000, idle: 10000 },
+  // Vercel can create many serverless instances; keep each instance's pool
+  // small to avoid multiplying connections against Supabase's pooler.
+  pool: { max: poolMax, min: 0, acquire: 30000, idle: 10000 },
 });
 
 let connectPromise: Promise<void> | null = null;

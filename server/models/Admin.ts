@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/db';
 import { applyApiShape } from '../utils/shape';
+import getJwtSecret from '../utils/jwtSecret';
 
 class Admin extends Model {
   comparePassword(candidatePassword) {
@@ -10,7 +11,7 @@ class Admin extends Model {
   }
 
   generateAuthToken() {
-    return jwt.sign({ id: (this as any).id }, process.env.JWT_SECRET, {
+    return jwt.sign({ id: (this as any).id }, getJwtSecret(), {
       expiresIn: (process.env.JWT_EXPIRE || '7d') as any,
     });
   }

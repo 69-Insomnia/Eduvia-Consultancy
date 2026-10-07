@@ -4,6 +4,13 @@ import asyncHandler from '../middleware/asyncHandler';
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
+  if (!process.env.JWT_SECRET?.trim()) {
+    return res.status(503).json({
+      success: false,
+      message: 'Admin login is not configured. Set JWT_SECRET in the hosting environment, then restart or redeploy the app.',
+    });
+  }
+
   if (!email || !password) {
     return res.status(400).json({ success: false, message: 'Please provide email and password' });
   }

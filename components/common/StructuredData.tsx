@@ -1,9 +1,9 @@
 'use client';
 
 import { Helmet } from 'react-helmet-async';
+import { resolveSiteUrl } from '@/utils/siteUrl';
 
-const configured = process.env.NEXT_PUBLIC_SITE_URL || 'https://eduviaconsultancy.com';
-export const SITE_URL = configured.replace(/\/+$/, '');
+export const SITE_URL = resolveSiteUrl();
 
 // Stable @ids so the graph emitted in index.html for non-JS crawlers merges with
 // the graph React emits at runtime instead of appearing as two organizations.

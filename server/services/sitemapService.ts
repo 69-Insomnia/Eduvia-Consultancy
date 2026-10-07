@@ -1,11 +1,11 @@
 import Destination from '../models/Destination';
 import University from '../models/University';
 import Blog from '../models/Blog';
+import { resolveSiteUrl } from '../../utils/siteUrl';
 
-// Read lazily rather than at module scope: ESM hoists imports, so this module is
-// evaluated before server.js calls dotenv.config(), and a module-level read
-// would always miss SITE_URL from .env.
-const siteUrl = () => (process.env.SITE_URL || 'https://eduviaconsultancy.com').replace(/\/+$/, '');
+// Resolved lazily (see resolveSiteUrl) so it picks up SITE_URL from .env and
+// the Vercel deployment host rather than being frozen at import time.
+const siteUrl = () => resolveSiteUrl();
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
 let cache = null;

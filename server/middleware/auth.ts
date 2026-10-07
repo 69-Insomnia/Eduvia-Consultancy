@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import Admin from '../models/Admin';
+import getJwtSecret from '../utils/jwtSecret';
 
 const auth = async (req, res, next) => {
   try {
@@ -18,7 +19,14 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Not authorized, no token' });
     }
 
-    const decoded: any = jwt.verify(token, process.env.JWT_SECRET);
+    let secret: string;
+    try {
+      secret = getJwtSecret();
+    } catch (error: any) {
+      return res.status(503).json({ success: false, message: error.message });
+    }
+
+    const decoded: any = jwt.verify(token, secret);
     const admin = await Admin.findByPk(decoded.id);
 
     if (!admin) {

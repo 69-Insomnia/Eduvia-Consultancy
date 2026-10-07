@@ -52,6 +52,20 @@ export default function UniversityDetail() {
 
   const u = university;
   const name = u?.name || slug;
+  const programCandidates = [
+    ...(u?.programs || []),
+    ...(u?.courses || []),
+    ...(u?.popularCourses || []),
+  ];
+  const programs = programCandidates.filter((course, index, all) => {
+    const courseName = String(typeof course === 'string' ? course : course?.name || '').trim().toLowerCase();
+    return courseName && all.findIndex((candidate) =>
+      String(typeof candidate === 'string' ? candidate : candidate?.name || '').trim().toLowerCase() === courseName
+    ) === index;
+  });
+  const intakes = u?.intakes?.length
+    ? u.intakes
+    : [...new Set((u?.courses || []).map((course) => course.intake).filter(Boolean))];
   const breadcrumbItems = [
     { label: 'Universities', link: '/universities' },
     { label: name },
@@ -160,7 +174,7 @@ export default function UniversityDetail() {
       </section>
 
       {/* Popular Programs */}
-      {u.popularCourses && u.popularCourses.length > 0 && (
+      {programs.length > 0 && (
         <section className="bg-dark-50 py-16 md:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading eyebrow="Programs" title="Popular Programs" />
@@ -175,11 +189,11 @@ export default function UniversityDetail() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-dark-200/70">
-                    {u.popularCourses.map((course, i) => (
+                    {programs.map((course, i) => (
                       <tr key={i} className="transition-colors hover:bg-dark-50">
                         <td className="px-6 py-4 text-sm font-medium text-dark-900">{typeof course === 'string' ? course : course.name}</td>
-                        <td className="px-6 py-4 text-sm text-dark-500">{typeof course === 'object' ? course.level : 'Various'}</td>
-                        <td className="px-6 py-4 text-sm text-dark-500">{typeof course === 'object' ? course.duration : 'Varies'}</td>
+                        <td className="px-6 py-4 text-sm text-dark-500">{typeof course === 'object' ? course.degree || course.level || course.degreeLevel || 'Various' : 'Various'}</td>
+                        <td className="px-6 py-4 text-sm text-dark-500">{typeof course === 'object' ? course.duration || 'Varies' : 'Varies'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -209,7 +223,7 @@ export default function UniversityDetail() {
                 Tuition Fees
               </h3>
               <p className="text-sm leading-relaxed text-dark-500">
-                {u.tuitionFees || 'Tuition fees vary by program and level of study. Contact us for the latest fee structure and available payment plans.'}
+                {u.tuitionRange || u.tuitionFees || 'Tuition fees vary by program and level of study. Contact us for the latest fee structure and available payment plans.'}
               </p>
             </motion.div>
           </div>
@@ -241,7 +255,7 @@ export default function UniversityDetail() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <SectionHeading eyebrow="Admission cycles" title="Intakes" />
           <div className="flex flex-wrap justify-center gap-3">
-            {(u.intakes || ['Spring (February/March)', 'Fall (August/September)']).map((intake, i) => (
+            {(intakes.length ? intakes : ['Spring (February/March)', 'Fall (August/September)']).map((intake, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ delay: i * 0.06, duration: 0.45 }} className="flex items-center gap-2 rounded-full border border-primary-100 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700">
                 <Calendar className="h-4 w-4" aria-hidden="true" />
                 {typeof intake === 'string' ? intake : intake.name}
@@ -256,7 +270,7 @@ export default function UniversityDetail() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <SectionHeading eyebrow="Why this university" title={`Why Study at ${name}?`} />
           <div className="grid sm:grid-cols-2 gap-4">
-            {(u.whyStudyHere || [
+            {(u.features?.length ? u.features : u.whyStudyHere || [
               'Globally recognized degree and qualifications',
               'Diverse and inclusive campus community',
               'Research opportunities with leading faculty',

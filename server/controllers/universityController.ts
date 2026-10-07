@@ -1,5 +1,6 @@
 import { Op } from 'sequelize';
 import University from '../models/University';
+import Course from '../models/Course';
 import asyncHandler from '../middleware/asyncHandler';
 import paginate from '../utils/pagination';
 import { iLike } from '../utils/search';
@@ -51,7 +52,20 @@ export const getUniversityBySlug = asyncHandler(async (req, res) => {
   if (!university) {
     return res.status(404).json({ success: false, message: 'University not found' });
   }
-  res.json({ success: true, university });
+
+  const courses = await Course.findAll({
+    where: { isActive: true },
+    include: [{
+      model: University,
+      as: 'universities',
+      attributes: [],
+      through: { attributes: [] },
+      where: { id: university.id },
+    }],
+    order: [['name', 'ASC']],
+  });
+
+  res.json({ success: true, university, courses });
 });
 
 export const getUniversityById = asyncHandler(async (req, res) => {
