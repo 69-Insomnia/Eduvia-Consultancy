@@ -9,8 +9,30 @@ import pg from 'pg';
 // can use whichever convention it was generated with: Supabase's CLI writes
 // `POOLER_URL`/`DATABASE_URL`, older copies of this file used `SUPABASE_DB_URL`.
 // Order matters — the transaction pooler first, direct connection last.
-export const dbUrl =
-  process.env.SUPABASE_DB_URL || process.env.POOLER_URL || process.env.DATABASE_URL || '';
+//
+// TLS-related query params are stripped: Sequelize re-merges the URL through
+// `pgConnectionString.parse()` over our options, and `sslmode`/`ssl*` there
+// replace dialectOptions.ssl with `{}` — turning certificate verification back
+// on, which fails against Supabase's pooler chain with
+// "self-signed certificate in certificate chain". TLS settings live solely in
+// dialectOptions below (and are deep-cloned into the connection manager at
+// construction time, so they must be right when `new Sequelize` runs).
+const stripTlsParams = (raw: string): string => {
+  if (!raw) return raw;
+  try {
+    const u = new URL(raw);
+    for (const key of ['sslmode', 'ssl', 'sslcert', 'sslkey', 'sslrootcert']) {
+      u.searchParams.delete(key);
+    }
+    return u.toString();
+  } catch {
+    return raw;
+  }
+};
+
+export const dbUrl = stripTlsParams(
+  process.env.SUPABASE_DB_URL || process.env.POOLER_URL || process.env.DATABASE_URL || ''
+);
 
 const requestedPoolMax = Number(process.env.DB_POOL_MAX || 1);
 const poolMax = Number.isInteger(requestedPoolMax) && requestedPoolMax > 0 ? requestedPoolMax : 1;
