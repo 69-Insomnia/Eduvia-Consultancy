@@ -41,6 +41,28 @@ export default function DestinationDetail() {
   const [destination, setDestination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // lowercased university name -> slug, so popular-university chips on this
+  // destination page can link to /universities/:slug.
+  const [universitySlugs, setUniversitySlugs] = useState({});
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get('/universities')
+      .then((res) => {
+        if (cancelled) return;
+        const list = res.data?.universities || res.data?.data || [];
+        const map = {};
+        list.forEach((u) => {
+          if (u?.name && u?.slug) map[String(u.name).toLowerCase()] = u.slug;
+        });
+        setUniversitySlugs(map);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const fetchDestination = async () => {
@@ -268,16 +290,38 @@ export default function DestinationDetail() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading eyebrow="Universities" title={`Popular Universities in ${name}`} />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {d.popularUniversities.map((uni, i) => (
-                <motion.div
-                  key={i}
-                  {...STEP_ANIMATION(i)}
-                  className="flex items-center gap-3 rounded-2xl border border-dark-200/70 bg-dark-50 p-4"
-                >
-                  <Building2 className="h-5 w-5 shrink-0 text-secondary-500" aria-hidden="true" />
-                  <span className="text-sm font-medium text-dark-900">{typeof uni === 'string' ? uni : uni.name}</span>
-                </motion.div>
-              ))}
+              {d.popularUniversities.map((uni, i) => {
+                const uniName = typeof uni === 'string' ? uni : uni?.name;
+                const uniSlug =
+                  (typeof uni === 'object' && uni?.slug) ||
+                  universitySlugs[String(uniName || '').toLowerCase()] ||
+                  '';
+                const content = (
+                  <>
+                    <Building2 className="h-5 w-5 shrink-0 text-secondary-500" aria-hidden="true" />
+                    <span className="text-sm font-medium text-dark-900">{uniName}</span>
+                    {uniSlug && (
+                      <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-dark-400 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-primary-500" aria-hidden="true" />
+                    )}
+                  </>
+                );
+                return (
+                  <motion.div key={i} {...STEP_ANIMATION(i)}>
+                    {uniSlug ? (
+                      <Link
+                        to={`/universities/${uniSlug}`}
+                        className="group flex h-full items-center gap-3 rounded-2xl border border-dark-200/70 bg-dark-50 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary-200 hover:bg-white hover:shadow-sm"
+                      >
+                        {content}
+                      </Link>
+                    ) : (
+                      <div className="flex h-full items-center gap-3 rounded-2xl border border-dark-200/70 bg-dark-50 p-4">
+                        {content}
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         </section>
