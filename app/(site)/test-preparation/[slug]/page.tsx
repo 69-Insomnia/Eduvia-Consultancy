@@ -2,6 +2,9 @@ import { notFound } from 'next/navigation';
 import View from '../../../../views/TestDetail';
 import { getEntityMetadata } from '../../../../server/services/pageMetadata';
 
+// Safety-net freshness: admin saves purge this path; 60s covers the rest.
+export const revalidate = 60;
+
 // Mirrors TEST_DATA in views/TestDetail.tsx — the guide pages are built from
 // this local copy rather than the database, so only the labels are needed here
 // to title the document before the client component mounts.

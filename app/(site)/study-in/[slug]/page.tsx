@@ -1,21 +1,21 @@
-import { unstable_cache } from 'next/cache';
 import { notFound } from 'next/navigation';
 import View from '../../../../views/DestinationDetail';
 import Destination from '../../../../server/models/Destination';
 import { getEntityMetadata } from '../../../../server/services/pageMetadata';
 
-const loadDestination = unstable_cache(
-  async (slug: string) => {
-    const row: any = await Destination.findOne({
-      where: { slug, isActive: true },
-      attributes: ['name', 'slug', 'seo', 'image', 'coverImage'],
-    });
-    if (!row) return null;
-    return { name: row.name, slug: row.slug, seo: row.seo };
-  },
-  ['destination-page-metadata'],
-  { revalidate: 300 }
-);
+// Safety-net freshness: the admin purges this path on write (`res.revalidate`
+// from the destination/page-seo endpoints), so an edit is normally live at
+// once; 60s covers anything that never goes through the API.
+export const revalidate = 60;
+
+async function loadDestination(slug: string) {
+  const row: any = await Destination.findOne({
+    where: { slug, isActive: true },
+    attributes: ['name', 'slug', 'seo', 'image', 'coverImage'],
+  });
+  if (!row) return null;
+  return { name: row.name, slug: row.slug, seo: row.seo };
+}
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   let destination: any = null;

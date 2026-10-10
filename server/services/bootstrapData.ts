@@ -1,21 +1,23 @@
-import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 import SiteSettings from '../models/SiteSettings';
 import PageSeo from '../models/PageSeo';
 
 /**
  * Site settings and page-SEO overrides, read on the server for the root layout.
  *
- * Imported by `app/layout.tsx` only — never by the Express app.
+ * Imported by `app/layout.tsx` only �?" never by the Express app.
  *
  * Both values are fetched by `SettingsContext` and `PageSeoContext` on mount, on
  * every page, for every visitor: two API round trips that each reach Supabase
  * (~161ms per round trip) before the page can settle. Reading them here lets the
  * values ship with the first byte of HTML instead.
  *
- * Wrapped in `unstable_cache` so the queries run at most once per revalidation
- * window rather than on every request — which also keeps the route out of
- * dynamic rendering. The trade-off is that an editor's change takes up to 5
- * minutes to reach the public site.
+ * Memoised per render request with React `cache()` (deduplicates the layout's
+ * read and each `generateMetadata` call within one request) but NOT across
+ * requests: an admin's SEO edit must reach the page on the next render. Page
+ * HTML freshness is handled by `export const revalidate = 60` on the pages plus
+ * `res.revalidate(path)` purges fired from the admin write endpoints, so the
+ * worst-case staleness of an edit is one purge round trip.
  *
  * Deliberately read-only: `SiteSettings.getSettings()` creates a row when none
  * exists, and a write on the render path (including at build time) is not
@@ -42,8 +44,6 @@ async function loadBootstrapData() {
   }
 }
 
-const getBootstrapData = unstable_cache(loadBootstrapData, ['eduvia-bootstrap'], {
-  revalidate: 300,
-});
+const getBootstrapData = cache(loadBootstrapData);
 
 export default getBootstrapData;

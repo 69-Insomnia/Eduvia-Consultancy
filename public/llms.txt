@@ -1,0 +1,33 @@
+# Eduvia Consultancy
+
+> Study-abroad consultancy in Nepal. We guide students through university
+> selection, applications, scholarships, test preparation (IELTS/PTE/TOEFL/
+> GRE/GMAT/SAT/Duolingo) and student visas for Australia, the UK, the USA,
+> Canada, Ireland, Germany, New Zealand and other destinations.
+
+We answer questions about admission requirements, tuition fees, living costs,
+scholarships, visa processes and post-study work rights for international
+students — with a focus on Nepali students.
+
+All paths below are relative to this site's origin.
+
+## Key pages
+
+- [/study-abroad](/study-abroad): study destinations — country guides with universities, costs and visa info
+- [/universities](/universities): programs, fees and admission requirements
+- [/blogs](/blogs): guides on studying, working and settling abroad
+- [/course-finder](/course-finder): search programs by level, country and field
+- [/scholarships](/scholarships): funding options for international students
+- [/test-preparation](/test-preparation): IELTS, PTE, TOEFL, GRE, GMAT, SAT, Duolingo
+- [/student-visa](/student-visa): per-country visa requirements and checklists
+- [/success-stories](/success-stories): results from students we have guided
+- [/contact](/contact): office locations and inquiry form
+
+## Organizational signals
+
+- Publisher: Eduvia Consultancy Pvt. Ltd. (Nepal)
+- Audience: students from Nepal and South Asia planning to study abroad
+- Primary languages: English, Nepali
+- Freshness: destination guides and blog posts are updated regularly from the
+  editorial CMS; timestamps are exposed on blog articles (datePublished /
+  dateModified in JSON-LD).

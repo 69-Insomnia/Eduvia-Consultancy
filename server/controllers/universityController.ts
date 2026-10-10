@@ -5,6 +5,10 @@ import asyncHandler from '../middleware/asyncHandler';
 import paginate from '../utils/pagination';
 import { iLike } from '../utils/search';
 import { cleanBody } from '../utils/shape';
+import { purgePaths } from '../utils/revalidate';
+
+// Detail and listing pages carry this record's metadata server-side.
+const universityPaths = (slug?: string) => ['/universities', slug ? `/universities/${slug}` : null];
 
 export const getUniversities = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, search, country, type, isFeatured } = req.query;
@@ -88,6 +92,7 @@ export const createUniversity = asyncHandler(async (req, res) => {
   }
 
   const university = await University.create(cleanBody(req.body));
+  await purgePaths(res, universityPaths(university.slug));
   res.status(201).json({ success: true, university });
 });
 
@@ -100,6 +105,7 @@ export const updateUniversity = asyncHandler(async (req, res) => {
   }
   university.set(cleanBody(req.body));
   await university.save();
+  await purgePaths(res, universityPaths(university.slug));
   res.json({ success: true, university });
 });
 
@@ -109,5 +115,6 @@ export const deleteUniversity = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'University not found' });
   }
   await university.destroy();
+  await purgePaths(res, universityPaths(university.slug));
   res.json({ success: true, message: 'University deleted successfully' });
 });

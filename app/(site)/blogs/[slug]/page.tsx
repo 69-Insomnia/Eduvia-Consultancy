@@ -1,45 +1,42 @@
-import { unstable_cache } from 'next/cache';
 import { notFound } from 'next/navigation';
 import View from '../../../../views/BlogDetail';
 import Blog from '../../../../server/models/Blog';
 import { getEntityMetadata } from '../../../../server/services/pageMetadata';
 
-// One cached read per slug: the view fetches the same post client-side, so this
-// would otherwise double the queries a detail page costs.
-const loadBlog = unstable_cache(
-  async (slug: string) => {
-    const row: any = await Blog.findOne({
-      where: { slug, isPublished: true },
-      attributes: [
-        'title',
-        'slug',
-        'excerpt',
-        'seo',
-        'tags',
-        'category',
-        'author',
-        'featuredImage',
-        'publishedAt',
-        'updatedAt',
-      ],
-    });
-    if (!row) return null;
-    return {
-      title: row.title,
-      slug: row.slug,
-      excerpt: row.excerpt,
-      seo: row.seo,
-      tags: Array.isArray(row.tags) ? row.tags : [],
-      category: row.category,
-      author: row.author,
-      featuredImage: row.featuredImage,
-      publishedAt: row.publishedAt ? new Date(row.publishedAt).toISOString() : null,
-      updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : null,
-    };
-  },
-  ['blog-page-metadata'],
-  { revalidate: 300 }
-);
+// Safety-net freshness: the admin purges this path on write; 60s covers
+// anything that never goes through the API.
+export const revalidate = 60;
+
+async function loadBlog(slug: string) {
+  const row: any = await Blog.findOne({
+    where: { slug, isPublished: true },
+    attributes: [
+      'title',
+      'slug',
+      'excerpt',
+      'seo',
+      'tags',
+      'category',
+      'author',
+      'featuredImage',
+      'publishedAt',
+      'updatedAt',
+    ],
+  });
+  if (!row) return null;
+  return {
+    title: row.title,
+    slug: row.slug,
+    excerpt: row.excerpt,
+    seo: row.seo,
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    category: row.category,
+    author: row.author,
+    featuredImage: row.featuredImage,
+    publishedAt: row.publishedAt ? new Date(row.publishedAt).toISOString() : null,
+    updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : null,
+  };
+}
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   // Only a missing post 404s — a database error keeps the page alive rather

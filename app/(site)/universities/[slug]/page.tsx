@@ -1,21 +1,20 @@
-import { unstable_cache } from 'next/cache';
 import { notFound } from 'next/navigation';
 import View from '../../../../views/UniversityDetail';
 import University from '../../../../server/models/University';
 import { getEntityMetadata } from '../../../../server/services/pageMetadata';
 
-const loadUniversity = unstable_cache(
-  async (slug: string) => {
-    const row: any = await University.findOne({
-      where: { slug },
-      attributes: ['name', 'slug', 'country', 'city', 'seo', 'coverImage'],
-    });
-    if (!row) return null;
-    return { name: row.name, slug: row.slug, country: row.country, seo: row.seo };
-  },
-  ['university-page-metadata'],
-  { revalidate: 300 }
-);
+// Safety-net freshness: the admin purges this path on write; 60s covers
+// anything that never goes through the API.
+export const revalidate = 60;
+
+async function loadUniversity(slug: string) {
+  const row: any = await University.findOne({
+    where: { slug },
+    attributes: ['name', 'slug', 'country', 'city', 'seo', 'coverImage'],
+  });
+  if (!row) return null;
+  return { name: row.name, slug: row.slug, country: row.country, seo: row.seo };
+}
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   let university: any = null;

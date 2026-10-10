@@ -26,6 +26,8 @@ type StoredSeo = {
   description?: string;
   keywords?: string[];
   ogImage?: string;
+  ogTitle?: string;
+  ogDescription?: string;
   canonical?: string;
   robots?: string;
   ogType?: string;
@@ -91,11 +93,16 @@ function buildMetadata(input: {
   if (keywords) meta.keywords = keywords;
   if (robots) meta.robots = robots;
 
-  const socialTitle = (title as any)?.absolute || (typeof title === 'string' ? title : undefined) || description;
+  // Social copy can be authored separately from the meta title/description
+  // (the admin's "Social Title"/"Social Description" fields); fall back in
+  // order so a share card is never empty.
+  const socialTitle =
+    stored.ogTitle || (title as any)?.absolute || (typeof title === 'string' ? title : undefined) || description;
+  const socialDescription = stored.ogDescription || description;
   const social = {
     type: ogType,
     title: socialTitle,
-    description,
+    description: socialDescription,
     url: canonical,
     siteName: SITE_NAME,
     locale: 'en_US',
@@ -107,7 +114,7 @@ function buildMetadata(input: {
   meta.twitter = {
     card: 'summary_large_image',
     title: socialTitle,
-    description,
+    description: socialDescription,
     images: ogImage ? [ogImage] : undefined,
   };
 

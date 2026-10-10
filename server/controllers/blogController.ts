@@ -5,6 +5,10 @@ import asyncHandler from '../middleware/asyncHandler';
 import paginate from '../utils/pagination';
 import { iLike, jsonTextILike } from '../utils/search';
 import { cleanBody } from '../utils/shape';
+import { purgePaths } from '../utils/revalidate';
+
+// Blog detail and listing pages carry this record's metadata server-side.
+const blogPaths = (slug?: string) => ['/blogs', slug ? `/blogs/${slug}` : null];
 
 const RELATED_SHORT = ['id', 'title', 'slug', 'featuredImage', 'excerpt'];
 const RELATED_SHORTER = ['id', 'title', 'slug', 'excerpt'];
@@ -93,6 +97,7 @@ export const createBlog = asyncHandler(async (req, res) => {
     await blog.setRelatedPosts(relatedPosts || []);
     blog = await Blog.findByPk(blog.id, { include: [relatedInclude(RELATED_SHORTER)] });
   }
+  await purgePaths(res, blogPaths(blog.slug));
   res.status(201).json({ success: true, blog });
 });
 
@@ -111,6 +116,7 @@ export const updateBlog = asyncHandler(async (req, res) => {
     await blog.setRelatedPosts(relatedPosts || []);
   }
   const reloaded = await Blog.findByPk(blog.id, { include: [relatedInclude(RELATED_SHORTER)] });
+  await purgePaths(res, blogPaths(reloaded?.slug));
   res.json({ success: true, blog: reloaded });
 });
 
@@ -120,6 +126,7 @@ export const deleteBlog = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Blog not found' });
   }
   await blog.destroy();
+  await purgePaths(res, blogPaths(blog.slug));
   res.json({ success: true, message: 'Blog deleted successfully' });
 });
 
@@ -131,6 +138,7 @@ export const publishBlog = asyncHandler(async (req, res) => {
   blog.isPublished = true;
   blog.publishedAt = new Date();
   await blog.save();
+  await purgePaths(res, blogPaths(blog.slug));
   res.json({ success: true, blog });
 });
 
@@ -141,6 +149,7 @@ export const unpublishBlog = asyncHandler(async (req, res) => {
   }
   blog.isPublished = false;
   await blog.save();
+  await purgePaths(res, blogPaths(blog.slug));
   res.json({ success: true, blog });
 });
 

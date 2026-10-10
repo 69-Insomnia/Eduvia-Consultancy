@@ -1,22 +1,21 @@
-import { unstable_cache } from 'next/cache';
 import { notFound } from 'next/navigation';
 import View from '../../../../views/VisaDetail';
 import Destination from '../../../../server/models/Destination';
 import { getEntityMetadata } from '../../../../server/services/pageMetadata';
 
+// Safety-net freshness: the admin purges this path on write; 60s covers
+// anything that never goes through the API.
+export const revalidate = 60;
+
 // The visa guide reuses the destination's own name so the head tags match the
 // hero the view renders, without a second query on the client.
-const loadDestinationName = unstable_cache(
-  async (slug: string) => {
-    const row: any = await Destination.findOne({
-      where: { slug, isActive: true },
-      attributes: ['name'],
-    });
-    return row?.name || null;
-  },
-  ['visa-page-metadata'],
-  { revalidate: 300 }
-);
+async function loadDestinationName(slug: string) {
+  const row: any = await Destination.findOne({
+    where: { slug, isActive: true },
+    attributes: ['name'],
+  });
+  return row?.name || null;
+}
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   let name: string | null = null;

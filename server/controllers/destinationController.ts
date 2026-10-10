@@ -5,6 +5,15 @@ import asyncHandler from '../middleware/asyncHandler';
 import paginate from '../utils/pagination';
 import { iLike } from '../utils/search';
 import { cleanBody } from '../utils/shape';
+import { purgePaths } from '../utils/revalidate';
+
+// The destination detail page, its visa guide and the listing are prerendered
+// from this record (metadata server-side); purge all three on write.
+const destinationPaths = (slug?: string) => [
+  '/study-in',
+  slug ? `/study-in/${slug}` : null,
+  slug ? `/student-visa/${slug}` : null,
+];
 
 const RELATED_SHORT = ['id', 'title', 'slug', 'featuredImage', 'excerpt'];
 
@@ -92,6 +101,7 @@ export const createDestination = asyncHandler(async (req, res) => {
   destination = await Destination.findByPk(destination.id, {
     include: [relatedBlogsInclude(RELATED_SHORT)],
   });
+  await purgePaths(res, destinationPaths(destination.slug));
   res.status(201).json({ success: true, destination });
 });
 
@@ -111,6 +121,7 @@ export const updateDestination = asyncHandler(async (req, res) => {
   const reloaded = await Destination.findByPk(destination.id, {
     include: [relatedBlogsInclude(RELATED_SHORT)],
   });
+  await purgePaths(res, destinationPaths(reloaded?.slug));
   res.json({ success: true, destination: reloaded });
 });
 
@@ -120,5 +131,6 @@ export const deleteDestination = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Destination not found' });
   }
   await destination.destroy();
+  await purgePaths(res, destinationPaths(destination.slug));
   res.json({ success: true, message: 'Destination deleted successfully' });
 });

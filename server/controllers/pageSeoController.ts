@@ -1,6 +1,7 @@
 import PageSeo from '../models/PageSeo';
 import asyncHandler from '../middleware/asyncHandler';
 import { PAGES, findPage } from '../config/pages';
+import { purgePaths } from '../utils/revalidate';
 
 /**
  * Public read. Returns only rows that exist, keyed by page key — a page with no
@@ -71,6 +72,10 @@ export const updatePageSeo = asyncHandler(async (req, res) => {
   page.seo = req.body?.seo ?? {};
   await page.save();
 
+  // Purge the page's cached HTML so the new title/description ship on the very
+  // next request instead of waiting out the revalidate interval.
+  await purgePaths(res, [findPage(key)?.path]);
+
   res.json({ success: true, page: { key: page.key, seo: page.seo } });
 });
 
@@ -88,6 +93,8 @@ export const resetPageSeo = asyncHandler(async (req, res) => {
 
   page.seo = {};
   await page.save();
+
+  await purgePaths(res, [findPage(key)?.path]);
 
   res.json({ success: true, page: { key: page.key, seo: page.seo } });
 });

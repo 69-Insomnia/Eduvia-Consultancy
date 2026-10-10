@@ -1,5 +1,6 @@
 import SiteSettings from '../models/SiteSettings';
 import asyncHandler from '../middleware/asyncHandler';
+import { purgePaths } from '../utils/revalidate';
 
 export const getSettings = asyncHandler(async (_req, res) => {
   const settings = await SiteSettings.getSettings();
@@ -27,5 +28,8 @@ export const updateSettings = asyncHandler(async (req, res) => {
   }
 
   await settings.save();
+  // Settings feed the root layout and the OG-image fallback on every page;
+  // purge the home page so the change is visible at once.
+  await purgePaths(res, ['/']);
   res.json({ success: true, settings });
 });
