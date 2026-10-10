@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import View from '../../../../views/BlogDetail';
 import Blog from '../../../../server/models/Blog';
-import { getEntityMetadata } from '../../../../server/services/pageMetadata';
+import { getEntityMetadata, getSeoMetaStored, getSeoMetaJsonLd } from '../../../../server/services/pageMetadata';
 
 // Safety-net freshness: the admin purges this path on write; 60s covers
 // anything that never goes through the API.
@@ -49,9 +49,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
   if (!blog) notFound();
 
+  const overrides = await getSeoMetaStored('blog', blog.slug);
+
   return getEntityMetadata({
     path: `/blogs/${blog.slug}`,
-    seo: blog.seo,
+    seo: { ...(blog.seo || {}), ...overrides },
     fallback: {
       title: blog.title,
       description: blog.excerpt || undefined,
@@ -71,10 +73,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 export default async function Page({ params }: { params: { slug: string } }) {
   // `notFound()` here (not just in the metadata) is what sets the 404 status
   // code — metadata alone renders the not-found page with a 200.
+  let customJsonLd = null;
   try {
     if (!(await loadBlog(params.slug))) notFound();
+    customJsonLd = await getSeoMetaJsonLd('blog', params.slug);
   } catch {
     // Database unavailable: render anyway and let the view retry client-side.
   }
-  return <View />;
+  return <View customJsonLd={customJsonLd} />;
 }

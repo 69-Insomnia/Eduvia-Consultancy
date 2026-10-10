@@ -30,6 +30,7 @@ import dashboardRoutes from './routes/dashboardRoutes';
 import searchRoutes from './routes/searchRoutes';
 import seoRoutes from './routes/seoRoutes';
 import pageSeoRoutes from './routes/pageSeoRoutes';
+import seoMetaRoutes from './routes/seoMetaRoutes';
 
 const app = express();
 
@@ -105,6 +106,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/page-seo', pageSeoRoutes);
+app.use('/api/seo-meta', seoMetaRoutes);
 
 // Root-level so /sitemap.xml is reachable without the /api prefix and without
 // the rate limiter above. Must be registered before the catch-all below.

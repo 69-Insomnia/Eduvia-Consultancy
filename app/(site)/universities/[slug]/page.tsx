@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import View from '../../../../views/UniversityDetail';
 import University from '../../../../server/models/University';
-import { getEntityMetadata } from '../../../../server/services/pageMetadata';
+import { getEntityMetadata, getSeoMetaStored, getSeoMetaJsonLd } from '../../../../server/services/pageMetadata';
 
 // Safety-net freshness: the admin purges this path on write; 60s covers
 // anything that never goes through the API.
@@ -28,9 +28,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!university) notFound();
   const name = university.name;
 
+  // Admin-authored `seo_meta` overrides sit on top of the record's own seo.
+  const overrides = await getSeoMetaStored('university', university.slug);
+
   return getEntityMetadata({
     path: `/universities/${params.slug}`,
-    seo: university.seo,
+    seo: { ...(university.seo || {}), ...overrides },
     fallback: {
       title: `${name} - University Details & Admissions`,
       description: `Learn about ${name}: programs, admission requirements, tuition fees, scholarships, and how to apply. Expert guidance from Eduvia Consultancy.`,
@@ -42,10 +45,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 export default async function Page({ params }: { params: { slug: string } }) {
   // Also checked during render: throwing from `generateMetadata` alone renders
   // the not-found page with a 200 status code.
+  let customJsonLd = null;
   try {
     if (!(await loadUniversity(params.slug))) notFound();
+    // Extra JSON-LD an editor attached to this university ships in the HTML.
+    customJsonLd = await getSeoMetaJsonLd('university', params.slug);
   } catch {
     // Database unavailable: render anyway and let the view retry client-side.
   }
-  return <View />;
+  return <View customJsonLd={customJsonLd} />;
 }

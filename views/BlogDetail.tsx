@@ -23,8 +23,9 @@ import SmartImage from '../components/common/SmartImage';
 import api from '../services/api';
 import { formatDate } from '../utils/helpers';
 import { blogImageCandidates } from '../utils/imageAssets';
+import { withCustomJsonLd } from '../hooks/useSeoMeta';
 
-export default function BlogDetail() {
+export default function BlogDetail({ customJsonLd }: { customJsonLd?: any } = {}) {
   const { slug } = useParams();
   const [blog, setBlog] = useState(null);
   const [relatedBlogs, setRelatedBlogs] = useState([]);
@@ -132,7 +133,7 @@ export default function BlogDetail() {
           section: blog.category,
           tags: blog.tags,
         }}
-        jsonLd={[blogPosting, buildBreadcrumbList(breadcrumbItems)]}
+        jsonLd={withCustomJsonLd([blogPosting, buildBreadcrumbList(breadcrumbItems)], customJsonLd)}
       />
 
       {/* Featured image */}

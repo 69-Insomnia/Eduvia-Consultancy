@@ -25,6 +25,7 @@ import {
   LogOut,
   Gauge,
   FileSearch,
+  Braces,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Logo from '../components/common/Logo';
@@ -45,6 +46,7 @@ const ADMIN_NAV: any[] = [
     items: [
       { label: 'SEO Health', path: '/admin/seo', icon: Gauge },
       { label: 'Page SEO', path: '/admin/page-seo', icon: FileSearch },
+      { label: 'Structured Data', path: '/admin/seo-meta', icon: Braces },
     ],
   },
   {

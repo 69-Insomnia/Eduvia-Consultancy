@@ -24,8 +24,9 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import SmartImage from '../components/common/SmartImage';
 import api from '../services/api';
 import { storedImageCandidates } from '../utils/imageAssets';
+import { withCustomJsonLd } from '../hooks/useSeoMeta';
 
-export default function UniversityDetail() {
+export default function UniversityDetail({ customJsonLd }: { customJsonLd?: any } = {}) {
   const { slug } = useParams();
   const [university, setUniversity] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -85,7 +86,7 @@ export default function UniversityDetail() {
         canonical={seo.canonical || `/universities/${u?.slug || slug}`}
         type={seo.ogType}
         robots={seo.robots}
-        jsonLd={buildBreadcrumbList(breadcrumbItems)}
+        jsonLd={withCustomJsonLd(buildBreadcrumbList(breadcrumbItems), customJsonLd)}
       />
 
       {/* Hero */}

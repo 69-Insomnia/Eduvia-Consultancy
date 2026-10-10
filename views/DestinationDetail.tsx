@@ -28,6 +28,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import api from '../services/api';
 import { DESTINATIONS } from '../utils/constants';
 import { DESTINATION_IMAGES } from '../utils/imageAssets';
+import { withCustomJsonLd } from '../hooks/useSeoMeta';
 
 const STEP_ANIMATION = (i) => ({
   initial: { opacity: 0, y: 20 },
@@ -36,7 +37,7 @@ const STEP_ANIMATION = (i) => ({
   transition: { delay: i * 0.06, duration: 0.45 },
 });
 
-export default function DestinationDetail() {
+export default function DestinationDetail({ customJsonLd }: { customJsonLd?: any } = {}) {
   const { slug } = useParams() as any;
   const [destination, setDestination] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -166,7 +167,7 @@ export default function DestinationDetail() {
         canonical={seo.canonical || `/study-in/${d.slug || slug}`}
         type={seo.ogType}
         robots={seo.robots}
-        jsonLd={[buildBreadcrumbList(breadcrumbItems), faqSchema]}
+        jsonLd={withCustomJsonLd([buildBreadcrumbList(breadcrumbItems), faqSchema], customJsonLd)}
       />
 
       {/* Hero */}

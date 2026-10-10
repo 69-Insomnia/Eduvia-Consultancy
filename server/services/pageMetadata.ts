@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import getBootstrapData from './bootstrapData';
 import { PAGE_SEO, pagePath, type PageSeoDefaults } from '../../utils/pageSeoDefaults';
 import { resolveSiteUrl } from '../../utils/siteUrl';
+import SeoMeta from '../models/SeoMeta';
 
 /**
  * Server-side page metadata.
@@ -121,11 +122,62 @@ function buildMetadata(input: {
   return meta;
 }
 
-/** Metadata for one of the compiled-in static pages (`utils/pageSeoDefaults`). */
+/**
+ * Metadata for one of the compiled-in static pages (`utils/pageSeoDefaults`).
+ */
 export async function getPageMetadata(key: string): Promise<Metadata> {
   const { pages, settings } = await getBootstrapData();
   const stored = pages?.find((page: any) => page.key === key)?.seo || {};
   return buildMetadata({ path: pagePath(key), stored, defaults: PAGE_SEO[key], settings });
+}
+
+/**
+ * Reads the admin-authored `seo_meta` row for one entity and maps its columns
+ * onto the stored-seo shape `buildMetadata` consumes. Returns `{}` when no row
+ * exists (or the table is unreachable) so the record's own `seo` subdocument
+ * and the page fallbacks keep working untouched.
+ */
+export async function getSeoMetaStored(entityType: string, entityId: string): Promise<StoredSeo> {
+  try {
+    const row = await SeoMeta.findOne({ where: { entityType, entityId } });
+    if (!row) return {};
+    return {
+      title: row.metaTitle || undefined,
+      description: row.metaDescription || undefined,
+      ogImage: row.ogImageUrl || undefined,
+      ogTitle: row.ogTitle || undefined,
+      ogDescription: row.ogDescription || undefined,
+      canonical: row.canonicalUrl || undefined,
+      robots: row.noindex ? 'noindex,follow' : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Returns just the custom JSON-LD node(s) an editor attached to one entity
+ * (object or array), or null. Pages pass this into the view as a prop so the
+ * extra <script type="application/ld+json"> ships in the server HTML rather
+ * than only after the client mounts.
+ */
+export async function getSeoMetaJsonLd(entityType: string, entityId: string): Promise<any> {
+  try {
+    const row = await SeoMeta.findOne({ where: { entityType, entityId } });
+    return row?.jsonLd ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Every custom JSON-LD row for one entity type (e.g. all `service` rows). */
+export async function getSeoMetaJsonLdByType(entityType: string): Promise<any[]> {
+  try {
+    const rows = await SeoMeta.findAll({ where: { entityType } });
+    return rows.map((row) => ({ entityId: row.entityId, jsonLd: row.jsonLd })).filter((r) => r.jsonLd);
+  } catch {
+    return [];
+  }
 }
 
 /**

@@ -31,6 +31,7 @@ import SectionHeading from '../components/common/SectionHeading';
 import CTASection from '../components/common/CTASection';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import api from '../services/api';
+import { withCustomJsonLd } from '../hooks/useSeoMeta';
 
 const ALL_SERVICES: any[] = [
   {
@@ -137,7 +138,7 @@ const ICON_MAP = {
 
 const resolveIcon = (name) => ICON_MAP[String(name || '').trim().toLowerCase()] || Globe;
 
-export default function Services() {
+export default function Services({ serviceJsonLd }: { serviceJsonLd?: any[] } = {}) {
   const [services, setServices] = useState(ALL_SERVICES);
   const [loading, setLoading] = useState(true);
 
@@ -201,7 +202,7 @@ export default function Services() {
 
   return (
     <>
-      <SEO {...seo} jsonLd={serviceList} />
+      <SEO {...seo} jsonLd={withCustomJsonLd(serviceList, (serviceJsonLd || []).length ? serviceJsonLd : null)} />
 
       {/* Hero */}
       <PageHero
